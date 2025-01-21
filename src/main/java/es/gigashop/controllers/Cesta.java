@@ -28,7 +28,7 @@ public class Cesta extends HttpServlet {
     public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String url = "/FrontController"; // La URL por defecto a la que se redirige al final
+        String url = "/JSP/tienda.jsp"; // La URL por defecto a la que se redirige al final
 
         // Obtén la acción que se realiza
         String accion = request.getParameter("accion");
@@ -53,10 +53,15 @@ public class Cesta extends HttpServlet {
                     // Actualiza la sesión y la cookie
                     session.setAttribute("carrito", carrito);
                     Utils.actualizarCookie(response, carrito);
-
-                    // Mensaje de confirmación
-                    request.setAttribute("eliminado", "Se ha eliminado el producto del carrito.");
-                    url = "JSP/carrito.jsp"; // Redirige al carrito
+                    
+                    if (carrito.isEmpty()){
+                        request.setAttribute("prodElim", "El carrito se ha vaciado por completo.");
+                        url = "JSP/tienda.jsp";
+                    } else {
+                        // Mensaje de confirmación
+                        request.setAttribute("prodElim", "Se ha eliminado el producto del carrito.");
+                        url = "JSP/carrito.jsp";
+                    }
                 }
             } else if (request.getParameter("annadir") != null) {
                 // Acción: Añadir producto al carrito

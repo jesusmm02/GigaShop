@@ -1,5 +1,6 @@
 package es.gigashop.DAO;
 
+import es.gigashop.beans.Filtro;
 import es.gigashop.beans.Producto;
 import java.util.List;
 
@@ -17,6 +18,18 @@ public interface IProductoDAO {
      * @return Producto con ese id
      */
     public Producto getProductoPorID(Short idProducto);
+    
+    
+    /**
+     * Obtiene todas las marcas de productos
+     * @return Lista de todas las marcas
+     */
+    public List<String> getMarcas();
+    
+    
+    public List<Producto> getProductosFiltrados(Filtro filtro);
+    
+    public List<Producto> buscarProductosNombreDescripcion(String texto);
     
     
     /**

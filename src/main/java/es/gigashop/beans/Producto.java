@@ -1,6 +1,8 @@
 package es.gigashop.beans;
 
-public class Producto {
+import java.io.Serializable;
+
+public class Producto implements Serializable {
 
     private Short idProducto;
     private Categoria categoria;
@@ -10,12 +12,6 @@ public class Producto {
     private String marca;
     private String imagen;
 
-    /*
-    public Producto(short idProducto, int cantidad) {
-        this.idProducto = idProducto;
-        //this.cantidad = cantidad;
-    }
-    */
 
     public Short getIdProducto() {
         return idProducto;

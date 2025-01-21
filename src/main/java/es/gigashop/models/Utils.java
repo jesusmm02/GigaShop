@@ -1,5 +1,7 @@
 package es.gigashop.models;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -121,5 +123,23 @@ public class Utils {
             }
         }
         return error;
+    }
+    
+    public static String hashMD5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes());
+            StringBuilder hexString = new StringBuilder();
+
+            for (byte b : messageDigest) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error al calcular MD5", e);
+        }
     }
 }

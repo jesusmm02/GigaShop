@@ -1,13 +1,18 @@
 package es.gigashop.controllers;
 
 import es.gigashop.DAO.IProductoDAO;
+import es.gigashop.DAO.ProductoDAO;
 import es.gigashop.DAOFactory.DAOFactory;
+import es.gigashop.beans.Categoria;
+import es.gigashop.beans.Filtro;
 
 import es.gigashop.beans.Producto;
 
 import es.gigashop.models.Utils;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +20,6 @@ import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -46,7 +50,7 @@ public class FrontController extends HttpServlet {
         DAOFactory daoF = DAOFactory.getDAOFactory();
         IProductoDAO prodDAO = daoF.getProductoDAO();
         productos = prodDAO.getProductos();
-        session.setAttribute("productosAlt", productos);
+        session.setAttribute("productos", productos);
 
         // Recupera o inicializa el carrito (Map<Integer, Integer>)
         Map<Short, Integer> carrito = (Map<Short, Integer>) session.getAttribute("carrito");
@@ -63,35 +67,157 @@ public class FrontController extends HttpServlet {
     public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String url = "JSP/tienda.jsp";
+        String url = "JSP/tienda.jsp"; // Página de resultados de productos
         String boton = request.getParameter("boton");
-        
+
         // Obtiene la sesión actual
         HttpSession session = request.getSession();
 
-        if (boton != null ) {
-            
-        
-            switch (boton) {
-                case "login":
-                    url = "/JSP/login.jsp";
-                    break;
-                case "registro":
-                    url = "/JSP/registro.jsp";
-                    break;
-                case "carrito":
-                    url = "/JSP/carrito.jsp";
-                    break;
-                case "eliminarCarro":
-                    Map<Short, Integer> carritoVacio = new HashMap();
+        // Verificar si hay un término de búsqueda
+        String busqueda = request.getParameter("busqueda");
 
-                    session.setAttribute("carrito", carritoVacio);
+        if (busqueda != null && busqueda.length() > 1) {
+            // Si hay un término de búsqueda válido (más de 1 letra)
+            ProductoDAO prodDAO = new ProductoDAO();
+            List<Producto> productos = prodDAO.buscarProductosNombreDescripcion(busqueda);
 
-                    Utils.actualizarCookie(response, carritoVacio);
+            request.setAttribute("productos", productos); // Resultados de búsqueda
+            request.setAttribute("busquedaActual", busqueda); // Mantener el valor en el input del formulario
+        } else {
+            // Si no hay búsqueda, procesamos los filtros
+            if (boton != null) {
+                switch (boton) {
+                    case "login":
+                        url = "/JSP/login.jsp";
+                        break;
+                    case "registro":
+                        url = "/JSP/registro.jsp";
+                        break;
+                    case "logout":
 
-                    break;
+                        session = request.getSession(false); // Obtener la sesión actual sin crear una nueva
+
+                        if (session != null) {
+                            session.removeAttribute("usuario");
+                        }
+                        
+                        request.setAttribute("logout", "Se ha cerrado la sesión.");
+
+                        url = "/JSP/tienda.jsp";
+                        break;
+
+                    case "carrito":
+                        url = "/JSP/carrito.jsp";
+                        break;
+                    case "eliminarCarro":
+                        Map<Short, Integer> carritoVacio = new HashMap<>();
+                        session.setAttribute("carrito", carritoVacio);
+                        Utils.actualizarCookie(response, carritoVacio);
+                        request.setAttribute("elimCarrito", "Se ha eliminado el carrito");
+                        break;
+                    case "verDetalles":
+                        // Procesar ver detalles del producto
+                        String idProductoStr = request.getParameter("idProducto");
+
+                        if (idProductoStr != null) {
+                            try {
+                                int idProducto = Integer.parseInt(idProductoStr);
+
+                                List<Producto> productos = (List<Producto>) session.getAttribute("productos");
+
+                                if (productos != null) {
+                                    Producto productoSeleccionado = null;
+                                    for (Producto p : productos) {
+                                        if (p.getIdProducto() == idProducto) {
+                                            productoSeleccionado = p;
+                                            break;
+                                        }
+                                    }
+
+                                    if (productoSeleccionado != null) {
+                                        request.setAttribute("producto", productoSeleccionado);
+                                        url = "JSP/producto.jsp";
+                                    } else {
+                                        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Producto no encontrado");
+                                        return;
+                                    }
+                                } else {
+                                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lista de productos no disponible en sesión");
+                                    return;
+                                }
+                            } catch (NumberFormatException e) {
+                                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID de producto inválido");
+                                return;
+                            }
+                        } else {
+                            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID de producto no proporcionado");
+                            return;
+                        }
+                        break;
+                }
+            } else {
+                // Procesa filtros como categorías, marcas y rango de precios
+                String[] categoriasSeleccionadas = request.getParameterValues("categorias");
+                String[] marcasSeleccionadas = request.getParameterValues("marcas");
+                String rangoPrecio = request.getParameter("rangoPrecio");
+
+                Filtro filtro = new Filtro();
+
+                // Procesar categorías seleccionadas
+                if (categoriasSeleccionadas != null && categoriasSeleccionadas.length > 0) {
+                    List<Categoria> categorias = new ArrayList<>();
+                    for (String categoriaId : categoriasSeleccionadas) {
+                        Categoria categoria = new Categoria();
+                        categoria.setIdCategoria(Byte.parseByte(categoriaId));
+                        categorias.add(categoria);
+                    }
+                    filtro.setCategorias(categorias);
+                }
+
+                // Procesar marcas seleccionadas
+                if (marcasSeleccionadas != null && marcasSeleccionadas.length > 0) {
+                    filtro.setMarcas(Arrays.asList(marcasSeleccionadas));
+                }
+
+                // Procesar el rango de precio
+                if (rangoPrecio != null && !rangoPrecio.isEmpty()) {
+                    if (rangoPrecio.equals("+500")) {
+                        filtro.setPrecioMin("500");
+                        filtro.setPrecioMax(null); // No hay límite superior
+                    } else if (rangoPrecio.contains("-")) {
+                        String[] precios = rangoPrecio.trim().split("-");
+                        if (precios.length == 2) {
+                            try {
+                                String minStr = precios[0].trim();
+                                String maxStr = precios[1].trim();
+
+                                double min = Double.parseDouble(minStr);
+                                double max = Double.parseDouble(maxStr);
+
+                                filtro.setPrecioMin(String.valueOf(min));
+                                filtro.setPrecioMax(String.valueOf(max));
+
+                            } catch (NumberFormatException e) {
+                                request.setAttribute("error", "Los valores del rango no son números válidos.");
+                            }
+                        } else {
+                            request.setAttribute("error", "El rango de precios debe tener dos valores.");
+                        }
+                    }
+                }
+
+                // Obtener productos filtrados
+                ProductoDAO prodDAO = new ProductoDAO();
+                List<Producto> productos = prodDAO.getProductosFiltrados(filtro);
+
+                // Enviar los productos filtrados y el filtro a la vista
+                session.setAttribute("productos", productos);
+                request.setAttribute("filtrosSeleccionados", filtro);
+
             }
         }
+
+        // Redirige a la página correspondiente
         request.getRequestDispatcher(url).forward(request, response);
     }
 

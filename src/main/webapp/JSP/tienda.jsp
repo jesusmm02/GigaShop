@@ -7,192 +7,243 @@
 <!DOCTYPE html>
 <html lang="es">
     <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <jsp:include page="/INC/metas.inc"/>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Giga Shop</title>
         <link rel="stylesheet" href="${bootstrap}" />
+        <!-- Bootstrap CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
         <style>
-            .btn:disabled {
-                background-color: green;
-                opacity: 0.3;
-                color: white;
-                border-color: green;
+            .navbar {
+                margin-bottom: 20px;
+            }
+            .filter-section {
+                background-color: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+            }
+            .filter-section h5 {
+                margin-bottom: 20px;
+            }
+            .product-card img {
+                max-height: 200px;
+                object-fit: cover;
+            }
+            .error {
+                color: red;
+                font-weight: bold;
+                text-align: center;
             }
         </style>
     </head>
     <body>
+        <!-- Cabecera -->
         <jsp:include page="/INC/cabecera.inc"/>
 
-        <!-- Barra superior -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container">
-                
-                <!-- Barra de búsqueda -->
-                <form class="form-inline my-2 my-lg-0" action="${contexto}/FrontController" method="GET" style="max-width: 400px; width: 100%;">
-                    <input class="form-control mr-sm-2" type="search" placeholder="Buscar por descripción..." aria-label="Buscar" name="busqueda">
-                    <button class="btn btn-outline-primary my-2 my-sm-0" type="submit">Buscar</button>
-                </form>
+        <div class="container mt-3">
 
-                <!-- Botones -->
-                <div class="d-flex align-items-center ml-auto">
-                    <form action="FrontController" method="POST" class="mr-2">
-                        <button type="submit" class="btn btn-outline-primary" name="boton" value="login">Login</button>
-                        <button type="submit" class="btn btn-outline-secondary" name="boton" value="registro">Registrarse</button>
-                        <button type="submit" class="btn btn-outline-success" name="boton" value="carrito"
-                                <c:if test="${empty sessionScope.carrito}">disabled</c:if>>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
-                                    <path d="M0 1.5A.5.5 0 0 1 .5 1h1a.5.5 0 0 1 .485.379L2.89 5H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 14H4a.5.5 0 0 1-.491-.408L1.01 1.607 1.607 2H13a.5.5 0 0 1 0 1H2.89l-.48 2.405L1.607 2.121.5 1h-1zm4 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
-                                    </svg>
-                                </button>
-                    </form>
+            <%@ include file="/INC/barra.jsp" %>
 
-                    <!-- Icono de perfil de usuario -->
-                    <div class="d-flex align-items-center ml-3">
-                        <img src="../IMG/productos/defaulf.jpg" class="rounded-xl d-block">
-                        <span class="ml-2 font-weight-bold">
-                            <c:choose>
-                                <c:when test="${not empty sessionScope.usuario.nombre}">
-                                    ${sessionScope.usuario.nombre}
-                                </c:when>
-                                <c:otherwise>
-                                    Anónimo
-                                </c:otherwise>
-                            </c:choose>
-                        </span>
-                    </div>
-                    
+            <!-- Mensaje flotante  -->
+            <c:if test="${not empty añadido || not empty elimCarrito || not empty prodElim || not empty usuRegistrado || not empty login || not empty logout}">
+                <div id="mensajeFlotante" class="mensaje-flotante">
+                    <c:choose>
+                        <c:when test="${not empty añadido}">
+                            ${añadido}
+                        </c:when>
+                        <c:when test="${not empty elimCarrito}">
+                            ${elimCarrito}
+                        </c:when>
+                        <c:when test="${not empty prodElim}">
+                            ${prodElim}
+                        </c:when>
+                        <c:when test="${not empty usuRegistrado}">
+                            ${usuRegistrado}
+                        </c:when>
+                        <c:when test="${not empty login}">
+                            ${login}
+                        </c:when>   
+                        <c:when test="${not empty logout}">
+                            ${logout}
+                        </c:when>
+                    </c:choose>
                 </div>
-            </div>
-        </nav>
+            </c:if>
+
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var mensaje = document.getElementById('mensajeFlotante');
+                    if (mensaje) {
+                        setTimeout(function () {
+                            mensaje.style.opacity = '0'; // Oculta el mensaje
+                            setTimeout(function () {
+                                mensaje.remove(); // Elimina el mensaje del DOM
+                            }, 1000); // Espera 1 segundo después de ocultarlo
+                        }, 3000); // Muestra el mensaje durante 3 segundos
+                    }
+                });
+            </script>
+
+            <style>
+                .mensaje-flotante {
+                    position: absolute;
+                    right: 20px;
+                    margin-top: 10px;
+                    background-color: #d4edda; /* Verde claro */
+                    color: #155724; /* Verde oscuro */
+                    padding: 10px 20px;
+                    border: 1px solid #c3e6cb;
+                    border-radius: 5px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    z-index: 1050;
+                    font-size: 14px;
+                    animation: link 0.5s ease-out;
+                }
+
+                @keyframes link {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            </style>
+        </div>
 
 
 
-        <div class="container mt-4">
+        <!-- Contenido principal -->
+        <div class="container">
             <div class="row">
-                <!-- Filtro en el lado izquierdo -->
-                <div class="col-md-3" style="padding-left: 10px;">
-                    <div class="form-group mb-3">
-                        <label class="mr-5">Categoría:</label>
-                        <select class="form-select" name="categorias">
-                            <option selected>*Categorías*</option>
-                            <option value="1">Placas Base</option>
-                            <option value="2">Procesadores</option>
-                            <option value="3">Discos Duros</option>
-                            <option value="4">Intel Placas</option>
-                            <option value="5">Amd Placas</option>
-                            <option value="7">Memoria Ram</option>
-                            <option value="9">Gráficas</option>
-                            <option value="11">Sata</option>
-                            <option value="13">Ssd</option>
-                            <option value="14">Externos</option>
-                            <option value="18">NVidia</option>
-                            <option value="19">Intel Socket 1150</option>
-                            <option value="20">Amd Socket AM3</option>
-                            <option value="21">Ddr3</option>
-                            <option value="22">Ddr4</option>
-                            <option value="23">Otros</option>
-                            <option value="24">Cajas</option>
-                            <option value="25">Fuentes</option>
-                            <option value="26">Periféricos</option>
-                            <option value="27">Servicios</option>
-                            <option value="28">Sobremesa</option>
-                            <option value="29">Amd</option>
-                            <option value="30">Portátiles</option>
-                        </select>
-                    </div>
+                <!-- Sección de filtros -->
+                <div class="col-md-3">
+                    <div class="filter-section">
+                        <h5>Filtros</h5>
+                        <form action="FrontController" method="POST">
 
-                    <div class="form-group mb-3">
-                        <label class="mr-5">Rango de precio:</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1">
-                            <label class="form-check-label">
-                                0 - 100 €
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" checked>
-                            <label class="form-check-label">
-                                101 - 200 €
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault3">
-                            <label class="form-check-label">
-                                201 - 300 €
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault4">
-                            <label class="form-check-label">
-                                301 - 500 €
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault5">
-                            <label class="form-check-label">
-                                Más de 500 €
-                            </label>
-                        </div>
-                    </div>
+                            <!-- Categorías -->
+                            <div class="form-group">
+                                <label>Categorías:</label>
+                                <c:forEach var="categoria" items="${categorias}">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" name="categorias" 
+                                               value="${categoria.idCategoria}" 
+                                               <c:if test="${filtrosSeleccionados != null && filtrosSeleccionados.categorias.contains(categoria)}">checked</c:if> />
+                                        <label class="form-check-label">${categoria.nombre}</label>
+                                    </div>
+                                </c:forEach>
+                            </div>
 
-                    <div class="form-group mb-3">
-                        <label class="mr-5">Marca:</label>
-                        <select class="form-select">
-                            <option selected>*Marcas*</option>
-                            <option value="1">Acer</option>
-                            <option value="2">AeroCool</option>
-                            <option value="3">Amd</option>
-                            <option value="4">Apple</option>
-                            <option value="5">ASRock</option>
-                            <option value="6">Asus</option>
-                            <option value="7">Corsair</option>
-                            <option value="8">Creative</option>
-                            <option value="9">Crucial</option>
-                            <option value="10">G.Skill</option>
-                            <option value="11">GigaByte</option>
-                            <option value="12">Hitachi</option>
-                            <option value="13">MSI</option>
-                            <option value="14">Nullware</option>
-                            <option value="15">PcCom</option>
-                            <option value="16">Rapoo</option>
-                            <option value="17">Sapphire</option>
-                            <option value="18">Seagaye</option>
-                            <option value="19">Sharkoon</option>
-                            <option value="20">Thermaltake</option>
-                            <option value="21">Toshiba</option>
-                            <option value="22">WD</option>
-                        </select>
-                    </div>
-                    <div class="dato">
-                        <p class="error"><c:out value="${error}" default=""/></p>
+                            <!-- Marcas -->
+                            <div class="form-group">
+                                <label>Marcas:</label>
+                                <c:forEach var="marca" items="${marcas}">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" name="marcas" 
+                                               value="${marca}" 
+                                               <c:if test="${filtrosSeleccionados.marcas.contains(marca)}">checked</c:if> />
+                                        <label class="form-check-label">${marca}</label>
+                                    </div>
+                                </c:forEach>
+                            </div>
+
+                            <!-- Rango de precios -->
+                            <div class="form-group">
+                                <label>Rango de precios:</label>
+                                <c:forEach var="rango" items="${['0-100', '101-200', '201-300', '301-500', '+500']}">
+                                    <div class="form-check">
+                                        <input type="radio" class="form-check-input" name="rangoPrecio" value="${rango}"
+                                               <c:if test="${filtrosSeleccionados != null && 
+                                                             (rango == '0-100' && filtrosSeleccionados.precioMin == '0' && filtrosSeleccionados.precioMax == '100' ||
+                                                             rango == '101-200' && filtrosSeleccionados.precioMin == '101' && filtrosSeleccionados.precioMax == '200' ||
+                                                             rango == '201-300' && filtrosSeleccionados.precioMin == '201' && filtrosSeleccionados.precioMax == '300' ||
+                                                             rango == '301-500' && filtrosSeleccionados.precioMin == '301' && filtrosSeleccionados.precioMax == '500' ||
+                                                             rango == '+500' && filtrosSeleccionados.precioMin == '500') }">checked</c:if>
+                                                     />
+                                               <label class="form-check-label">${rango} €</label>
+                                    </div>
+                                </c:forEach>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">Aplicar filtros</button>
+
+                        </form>
                     </div>
                 </div>
 
-                <!-- Productos -->
-                <div class="col-md-9">
-                    <div class="container mt-4">
-                        <div class="row">
 
-                            <c:forEach var="producto" items="${productosAlt}">
-                                <div class="col-md-4 mb-4">
-                                    <div class="card" style="width: 100%; margin: auto;">
-                                        <img src="${contexto}/IMG/productos/<c:out value='${producto.imagen}.jpg'/>" class="card-img-top">
-                                        <div class="card-body">
-                                            <h5 class="card-title"><c:out value="${producto.nombre}"/></h5>
-                                            <p class="card-text text-primary">
-                                                <fmt:formatNumber value="${producto.precio}" type="currency" currencySymbol="€" />
-                                            </p>
-                                            <form action="Cesta" method="POST">
-                                                <button type="submit" name="annadir" value="${producto.idProducto}" class="btn btn-success">Añadir a la cesta</button>
-                                            </form>
+                <!-- Lista de productos -->
+                <div class="col-md-9">
+                    <div class="row">
+                        <c:choose>
+                            <c:when test="${not empty productos}">
+                                <c:forEach var="producto" items="${productos}">
+                                    <div class="col-md-4">
+                                        <!-- Tarjeta de producto con enlace al modal -->
+                                        <div class="card product-card mb-4"  
+                                             data-bs-toggle="modal" 
+                                             data-bs-target="#modalProducto${producto.idProducto}" 
+                                             style="cursor: pointer;">
+                                            <img src="${contexto}/IMG/productos/${producto.imagen}.jpg" class="card-img-top">
+                                            <div class="card-body">
+                                                <h5 class="card-title">${producto.nombre}</h5>
+                                                <p class="card-text text-primary">
+                                                    <fmt:formatNumber value="${producto.precio}" type="currency" currencySymbol="€"/>
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </c:forEach>
 
-                        </div>
+                                    <!-- Modal de detalles del producto -->
+                                    <div class="modal fade" id="modalProducto${producto.idProducto}" tabindex="-1" aria-labelledby="modalLabel${producto.idProducto}" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="modalLabel${producto.idProducto}">${producto.nombre}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <img src="${contexto}/IMG/productos/${producto.imagen}.jpg" class="img-fluid">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <p><strong>Marca:</strong> ${producto.marca}</p>
+                                                            <p><strong>Categoría:</strong> ${producto.categoria.nombre}</p>
+                                                            <p><strong>Descripción:</strong> ${producto.descripcion}</p>
+                                                            <h2 class="text-primary">
+                                                                <fmt:formatNumber value="${producto.precio}" type="currency" currencySymbol="€"/>
+                                                            </h2>
+                                                            <!-- Botón para añadir al carrito desde el modal -->
+                                                            <form action="Cesta" method="POST">
+                                                                <button type="submit" class="btn btn-success w-100 mt-2" name="annadir" value="${producto.idProducto}">
+                                                                    Añadir a la cesta
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </c:forEach>
+                            </c:when>
+
+                            <c:otherwise>
+                                <div class="col-12 text-center">
+                                    <img src="${contexto}/IMG/no-result-found.jpg" alt="No hay resultados" class="img-fluid mt-5">
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
                 </div>
+
 
 
             </div>
