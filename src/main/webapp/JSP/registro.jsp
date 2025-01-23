@@ -21,10 +21,10 @@
         <jsp:include page="/INC/cabecera.inc"/>
 
         <div class="container mt-3">
-            
+
             <%@ include file="/INC/barra.jsp" %>
 
-            <!-- Mensaje flotante -->
+            <!-- Mensaje flotante de aviso -->
             <c:if test="${not empty errorCreate}">
                 <div id="mensajeFlotante" class="mensaje-flotante">
                     ${errorCreate}
@@ -76,7 +76,7 @@
         </div>
 
 
-
+        <!-- Formulario de registro -->
         <div class="container mt-5">
             <div class="row justify-content-center">
                 <div class="col-md-8">

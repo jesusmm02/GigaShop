@@ -60,18 +60,22 @@ public class ProductoDAO implements IProductoDAO {
         Connection connection = null;
         ResultSet resultado = null;
         PreparedStatement preparada = null;
-        String sql = "SELECT * FROM productos WHERE id = ?";
+        String sql = "SELECT * FROM productos WHERE idProducto = ?";
         try {
             connection = ConnectionFactory.getConnection();
             preparada = connection.prepareStatement(sql);
             preparada.setShort(1, idProducto);
             resultado = preparada.executeQuery();
 
-            resultado.next();
+            if (resultado.next()) {
             producto = new Producto();
-            producto.setIdProducto(resultado.getShort(1));
-            producto.setNombre(resultado.getString(2));
-
+            producto.setIdProducto(resultado.getShort("idProducto"));
+            producto.setNombre(resultado.getString("Nombre"));
+            producto.setPrecio(resultado.getDouble("Precio"));
+            producto.setMarca(resultado.getString("Marca"));
+            producto.setImagen(resultado.getString("Imagen"));
+            }
+            
         } catch (SQLException e) {
             Logger.getLogger(ProductoDAO.class.getName()).log(Level.SEVERE, null, e);
         } finally {
@@ -108,108 +112,105 @@ public class ProductoDAO implements IProductoDAO {
     }
 
     @Override
-public List<Producto> getProductosFiltrados(Filtro filtro) {
-    List<Producto> productos = new ArrayList<>();
-    Connection connection;
-    ResultSet resultado;
-    PreparedStatement preparada;
+    public List<Producto> getProductosFiltrados(Filtro filtro) {
+        List<Producto> productos = new ArrayList<>();
+        Connection connection;
+        ResultSet resultado;
+        PreparedStatement preparada;
 
-    StringBuilder sql = new StringBuilder(
-            "SELECT p.*, c.Nombre as NombreCategoria "
-            + "FROM productos p "
-            + "JOIN categorias c ON p.IdCategoria = c.IdCategoria "
-            + "WHERE 1=1");
+        StringBuilder sql = new StringBuilder(
+                "SELECT p.*, c.Nombre as NombreCategoria "
+                + "FROM productos p "
+                + "JOIN categorias c ON p.IdCategoria = c.IdCategoria "
+                + "WHERE 1=1");
 
-    // Aplicar filtro de categoría (si hay)
-    if (filtro.getCategorias() != null && !filtro.getCategorias().isEmpty()) {
-        sql.append(" AND p.IdCategoria IN (");
-        for (int i = 0; i < filtro.getCategorias().size(); i++) {
-            sql.append("?");
-            if (i < filtro.getCategorias().size() - 1) {
-                sql.append(", ");
-            }
-        }
-        sql.append(")");
-    }
-
-    // Aplicar filtro de precio (min y max)
-    if (filtro.getPrecioMin() != null && filtro.getPrecioMax() != null) {
-        sql.append(" AND p.Precio BETWEEN ? AND ?");
-    } else if (filtro.getPrecioMin() != null) {
-        sql.append(" AND p.Precio >= ?");
-    } else if (filtro.getPrecioMax() != null) {
-        sql.append(" AND p.Precio <= ?");
-    }
-
-    // Aplicar filtro de marca (si hay)
-    if (filtro.getMarcas() != null && !filtro.getMarcas().isEmpty()) {
-        sql.append(" AND p.Marca IN (");
-        for (int i = 0; i < filtro.getMarcas().size(); i++) {
-            sql.append("?");
-            if (i < filtro.getMarcas().size() - 1) {
-                sql.append(", ");
-            }
-        }
-        sql.append(")");
-    }
-
-    System.out.println("Consulta SQL generada: " + sql);  // Imprimir para verificar la consulta
-
-    try {
-        connection = ConnectionFactory.getConnection();
-        preparada = connection.prepareStatement(sql.toString());
-        int index = 1;
-
-        // Rellenar parámetros de categoría
+        // Aplicar filtro de categoría (si hay)
         if (filtro.getCategorias() != null && !filtro.getCategorias().isEmpty()) {
-            for (Categoria categoria : filtro.getCategorias()) {
-                preparada.setInt(index++, categoria.getIdCategoria());
+            sql.append(" AND p.IdCategoria IN (");
+            for (int i = 0; i < filtro.getCategorias().size(); i++) {
+                sql.append("?");
+                if (i < filtro.getCategorias().size() - 1) {
+                    sql.append(", ");
+                }
             }
+            sql.append(")");
         }
 
-        // Rellenar parámetros de precio mínimo y máximo
+        // Aplicar filtro de precio (min y max)
         if (filtro.getPrecioMin() != null && filtro.getPrecioMax() != null) {
-            preparada.setDouble(index++, filtro.getPrecioMin());
-            preparada.setDouble(index++, filtro.getPrecioMax());
+            sql.append(" AND p.Precio BETWEEN ? AND ?");
         } else if (filtro.getPrecioMin() != null) {
-            preparada.setDouble(index++, filtro.getPrecioMin());
+            sql.append(" AND p.Precio >= ?");
         } else if (filtro.getPrecioMax() != null) {
-            preparada.setDouble(index++, filtro.getPrecioMax());
+            sql.append(" AND p.Precio <= ?");
         }
 
-        // Rellenar parámetros de marca
+        // Aplicar filtro de marca (si hay)
         if (filtro.getMarcas() != null && !filtro.getMarcas().isEmpty()) {
-            for (String marca : filtro.getMarcas()) {
-                preparada.setString(index++, marca);
+            sql.append(" AND p.Marca IN (");
+            for (int i = 0; i < filtro.getMarcas().size(); i++) {
+                sql.append("?");
+                if (i < filtro.getMarcas().size() - 1) {
+                    sql.append(", ");
+                }
             }
+            sql.append(")");
         }
 
-        // Ejecutar consulta
-        resultado = preparada.executeQuery();
-        while (resultado.next()) {
-            Producto producto = new Producto();
-            producto.setIdProducto(resultado.getShort("IdProducto"));
-            producto.setNombre(resultado.getString("Nombre"));
-            producto.setPrecio(resultado.getDouble("Precio"));
-            producto.setMarca(resultado.getString("Marca"));
-            producto.setDescripcion(resultado.getString("Descripcion"));
-            producto.setImagen(resultado.getString("Imagen"));
+        System.out.println("Consulta SQL generada: " + sql);  // Imprimir para verificar la consulta
 
-            Categoria categoria = new Categoria();
-            categoria.setIdCategoria(resultado.getByte("IdCategoria"));
-            categoria.setNombre(resultado.getString("NombreCategoria"));
-            producto.setCategoria(categoria);
+        try {
+            connection = ConnectionFactory.getConnection();
+            preparada = connection.prepareStatement(sql.toString());
+            int index = 1;
 
-            productos.add(producto);
+            // Rellenar parámetros de categoría
+            if (filtro.getCategorias() != null && !filtro.getCategorias().isEmpty()) {
+                for (Categoria categoria : filtro.getCategorias()) {
+                    preparada.setInt(index++, categoria.getIdCategoria());
+                }
+            }
+
+            // Rellenar parámetros de precio mínimo y máximo
+            if (filtro.getPrecioMin() != null && filtro.getPrecioMax() != null) {
+                preparada.setDouble(index++, filtro.getPrecioMin());
+                preparada.setDouble(index++, filtro.getPrecioMax());
+            } else if (filtro.getPrecioMin() != null) {
+                preparada.setDouble(index++, filtro.getPrecioMin());
+            } else if (filtro.getPrecioMax() != null) {
+                preparada.setDouble(index++, filtro.getPrecioMax());
+            }
+
+            // Rellenar parámetros de marca
+            if (filtro.getMarcas() != null && !filtro.getMarcas().isEmpty()) {
+                for (String marca : filtro.getMarcas()) {
+                    preparada.setString(index++, marca);
+                }
+            }
+
+            // Ejecutar consulta
+            resultado = preparada.executeQuery();
+            while (resultado.next()) {
+                Producto producto = new Producto();
+                producto.setIdProducto(resultado.getShort("IdProducto"));
+                producto.setNombre(resultado.getString("Nombre"));
+                producto.setPrecio(resultado.getDouble("Precio"));
+                producto.setMarca(resultado.getString("Marca"));
+                producto.setDescripcion(resultado.getString("Descripcion"));
+                producto.setImagen(resultado.getString("Imagen"));
+
+                Categoria categoria = new Categoria();
+                categoria.setIdCategoria(resultado.getByte("IdCategoria"));
+                categoria.setNombre(resultado.getString("NombreCategoria"));
+                producto.setCategoria(categoria);
+
+                productos.add(producto);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
+        return productos;
     }
-    return productos;
-}
-
-
-
 
     @Override
     public List<Producto> buscarProductosNombreDescripcion(String texto) {

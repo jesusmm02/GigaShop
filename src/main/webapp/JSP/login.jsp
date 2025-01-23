@@ -70,17 +70,15 @@
                 <div class="col-md-6">
                     <h1 class="text-center mb-4">Iniciar sesión</h1>
 
-                    <form action="UsuarioController" method="POST" class="needs-validation">
+                    <form action="UsuarioController" method="POST">
                         <div class="form-group">
                             <label for="email">Correo Electrónico:</label>
                             <input type="email" id="email" name="email" class="form-control">
-                            <div class="invalid-feedback">Por favor, introduce un correo válido.</div>
                         </div>
 
                         <div class="form-group">
                             <label for="password">Contraseña:</label>
                             <input type="password" id="password" name="password" class="form-control">
-                            <div class="invalid-feedback">Por favor, introduce tu contraseña.</div>
                         </div>
 
                         <button type="submit" name="accion" value="login" class="btn btn-primary btn-block">Iniciar sesión</button>

@@ -6,8 +6,9 @@
 <!DOCTYPE html>
 <html lang="es">
     <head>
-        <meta charset="UTF-8">
-        <title>Editar perfil</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <jsp:include page="/INC/metas.inc"/>
+        <title>Giga Shop - Editar perfil</title>
         <link rel="stylesheet" href="${bootstrap}" />
     </head>
     <body>

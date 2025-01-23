@@ -5,6 +5,8 @@ import es.gigashop.DAO.ProductoDAO;
 import es.gigashop.DAOFactory.DAOFactory;
 import es.gigashop.beans.Categoria;
 import es.gigashop.beans.Filtro;
+import es.gigashop.beans.LineaPedido;
+import es.gigashop.beans.Pedido;
 
 import es.gigashop.beans.Producto;
 
@@ -20,6 +22,7 @@ import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -47,17 +50,29 @@ public class FrontController extends HttpServlet {
         // Obtiene la sesión actual
         HttpSession session = request.getSession();
 
-        DAOFactory daoF = DAOFactory.getDAOFactory();
-        IProductoDAO prodDAO = daoF.getProductoDAO();
-        productos = prodDAO.getProductos();
-        session.setAttribute("productos", productos);
+        if (session.getAttribute("productos") == null) {
+            DAOFactory daoF = DAOFactory.getDAOFactory();
+            IProductoDAO prodDAO = daoF.getProductoDAO();
+            productos = prodDAO.getProductos();
+            session.setAttribute("productos", productos);
+        }
 
-        // Recupera o inicializa el carrito (Map<Integer, Integer>)
-        Map<Short, Integer> carrito = (Map<Short, Integer>) session.getAttribute("carrito");
+        Pedido pedido = Utils.recuperarPedidoDeSesion(session);
+
+        Map<Short, Integer> carrito;
+        carrito = Utils.obtenerCarritoDesdeCookie(request);
         if (carrito == null) {
             carrito = new HashMap<>();
-            session.setAttribute("carrito", carrito);
         }
+
+        Utils.actualizarPedidoDesdeCarrito(pedido, carrito);
+
+        // Intentar calcular el importe total
+        pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
+
+        pedido.setIva(pedido.getImporte() * 0.21);
+
+        session.setAttribute("pedido", pedido);
 
         url = "JSP/tienda.jsp";
         request.getRequestDispatcher(url).forward(request, response);
@@ -100,7 +115,7 @@ public class FrontController extends HttpServlet {
                         if (session != null) {
                             session.removeAttribute("usuario");
                         }
-                        
+
                         request.setAttribute("logout", "Se ha cerrado la sesión.");
 
                         url = "/JSP/tienda.jsp";
@@ -111,7 +126,8 @@ public class FrontController extends HttpServlet {
                         break;
                     case "eliminarCarro":
                         Map<Short, Integer> carritoVacio = new HashMap<>();
-                        session.setAttribute("carrito", carritoVacio);
+                        session.removeAttribute("pedido");
+                        session.removeAttribute("carrito");
                         Utils.actualizarCookie(response, carritoVacio);
                         request.setAttribute("elimCarrito", "Se ha eliminado el carrito");
                         break;

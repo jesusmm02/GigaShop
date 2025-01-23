@@ -45,9 +45,10 @@
 
         <div class="container mt-3">
 
+            <!-- Barra de navegación y botones -->
             <%@ include file="/INC/barra.jsp" %>
 
-            <!-- Mensaje flotante  -->
+            <!-- Mensaje flotante de aviso -->
             <c:if test="${not empty añadido || not empty elimCarrito || not empty prodElim || not empty usuRegistrado || not empty login || not empty logout}">
                 <div id="mensajeFlotante" class="mensaje-flotante">
                     <c:choose>
@@ -114,6 +115,7 @@
                     }
                 }
             </style>
+            
         </div>
 
 
@@ -236,6 +238,7 @@
                             </c:when>
 
                             <c:otherwise>
+                                <!-- Si no se muestra ningún producto en la búsqueda -->
                                 <div class="col-12 text-center">
                                     <img src="${contexto}/IMG/no-result-found.jpg" alt="No hay resultados" class="img-fluid mt-5">
                                 </div>

@@ -1,13 +1,19 @@
 package es.gigashop.controllers;
 
+import es.gigashop.DAO.IPedidoDAO;
+import es.gigashop.DAO.IProductoDAO;
 import es.gigashop.DAO.IUsuarioDAO;
 import es.gigashop.DAOFactory.DAOFactory;
+import es.gigashop.beans.LineaPedido;
+import es.gigashop.beans.Pedido;
+import es.gigashop.beans.Producto;
 import es.gigashop.beans.Usuario;
 import es.gigashop.models.Utils;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -74,9 +80,40 @@ public class UsuarioController extends HttpServlet {
                             // Llamar al DAO para actualizar la información en la base de datos
                             usuarioDAO.actualizarUsuario(usuario);
 
-                            // Iniciar sesión y redirigir al usuario
+                            // Meter en sesión el usuario logueado
                             HttpSession session = request.getSession();
                             session.setAttribute("usuario", usuario);
+
+                            // LÓGICA PARA CARGAR EL CARRITO
+                            IPedidoDAO pdiDAO = daoF.getPedidoDAO();
+                            IProductoDAO proDAO = daoF.getProductoDAO();
+
+                            // Recuperar el carrito del usuario
+                            Pedido pedido = pdiDAO.obtenerPedidoPorUsuario(usuario.getIdUsuario());
+
+                            if (pedido != null) {
+                                // Recuperar las líneas del pedido
+                                List<LineaPedido> lineasPedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
+                                for (LineaPedido linea : lineasPedidos) {
+                                    // Completar los datos del producto
+                                    Producto producto = proDAO.getProductoPorID(linea.getProducto().getIdProducto());
+                                    linea.setProducto(producto);
+                                }
+                                pedido.setLineasPedidos(lineasPedidos);
+                                session.setAttribute("pedido", pedido);
+                            } else {
+                                // Crear un carrito vacío si no existe
+                                pedido = new Pedido();
+                                List<LineaPedido> lineaspedidos = new ArrayList();
+                                pedido.setFecha(new Date());
+                                pedido.setEstado(Pedido.Estado.c);
+                                pedido.setUsuario(usuario);
+                                pedido.setImporte(0.0);
+                                pedido.setIva(0.0);
+                                pedido.setLineasPedidos(lineaspedidos);
+                                session.setAttribute("pedido", pedido);
+                            }
+
                             request.setAttribute("login", "Se ha logueado el usuario " + "<strong>" + usuario.getNombre() + "</strong>");
                             request.getRequestDispatcher("/JSP/tienda.jsp").forward(request, response);
                         } else {
@@ -92,20 +129,25 @@ public class UsuarioController extends HttpServlet {
                 break;
                 case "editarPerfil": {
                     HttpSession session = request.getSession(false);
+
+                    // Si hay usuario en sesión, entonces puedo actualizarlo
                     if (session != null && session.getAttribute("usuario") != null) {
                         Usuario usuario = (Usuario) session.getAttribute("usuario");
+                        // Crea un atributo de petición usuario para poder mostrar sus parámetros en la vista de edición
                         request.setAttribute("usuario", usuario);
 
                         // Redirigir a la vista de edición de perfil
                         request.getRequestDispatcher("/JSP/editarPerfil.jsp").forward(request, response);
                     } else {
-                        // Si no hay usuario en sesión, redirige al inicio
+                        // Si no hay usuario en sesión, redirige al inicio de la aplicación
                         request.getRequestDispatcher("/JSP/tienda.jsp").forward(request, response);
                     }
                     break;
                 }
                 case "actualizarPerfil": {
                     HttpSession session = request.getSession(false);
+
+                    // Si usuario está en sesión
                     if (session != null && session.getAttribute("usuario") != null) {
                         Usuario usuario = (Usuario) session.getAttribute("usuario");
                         DAOFactory daoF = DAOFactory.getDAOFactory();
@@ -137,8 +179,11 @@ public class UsuarioController extends HttpServlet {
                         // Validar cambio de contraseña
                         if (passwordActual != null && !passwordActual.isEmpty()) {
                             String hashedPasswordActual = Utils.hashMD5(passwordActual);
-                            // Comparar directamente con la contraseña del usuario en sesión
+
+                            // Compara con la contraseña del usuario en sesión
                             if (hashedPasswordActual.equals(usuario.getPassword())) {
+
+                                // Si la contraseñaNueva 1 coincide con la contraseñaNueva2
                                 if (passwordNueva1 != null && passwordNueva1.equals(passwordNueva2)) {
                                     // Hashear la nueva contraseña antes de guardarla
                                     String hashedNuevaPassword = Utils.hashMD5(passwordNueva1);

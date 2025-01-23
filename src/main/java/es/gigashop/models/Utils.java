@@ -1,24 +1,39 @@
 package es.gigashop.models;
 
+import es.gigashop.DAO.IProductoDAO;
+import es.gigashop.DAOFactory.DAOFactory;
+
+import es.gigashop.beans.LineaPedido;
+import es.gigashop.beans.Pedido;
+import es.gigashop.beans.Producto;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-
-import java.util.HashMap;
-import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 public class Utils {
 
     /**
      * Recupera el carrito almacenado en las cookies del usuario.
      *
+     * Busca la cookie "carrito" y convierte su valor en un mapa que representa
+     * el carrito.
+     *
      * @param request El objeto HttpServletRequest que contiene las cookies del
      * cliente.
-     * @return Un mapa que representa el carrito con `idProducto` como clave y
-     * `cantidad` como valor, o un mapa vacío si no se encuentra la cookie.
+     * @return Un mapa con 'idProducto' como clave y 'cantidad' como valor, o un
+     * mapa vacío si no existe la cookie.
      */
     public static Map<Short, Integer> obtenerCarritoDesdeCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
@@ -39,9 +54,14 @@ public class Utils {
      * Convierte el valor de una cookie en un mapa que representa el carrito de
      * compras.
      *
+     * El formato del valor de la cookie es un lista de pares
+     * 'idProducto-cantidad' separados por un punto y coma (;). Este método
+     * interpreta esa cadena y la convierte en un mapa con las claves y valores
+     * correspondientes.
+     *
      * @param cookieValue El valor de la cookie (un String que contiene los
      * datos del carrito).
-     * @return Un mapa con `idProducto` como clave y `cantidad` como valor.
+     * @return Un mapa con 'idProducto' como clave y 'cantidad' como valor.
      */
     public static Map<Short, Integer> convertirCookieACarrito(String cookieValue) {
         Map<Short, Integer> carrito = new HashMap<>();
@@ -65,12 +85,16 @@ public class Utils {
     }
 
     /**
-     * Convierte un mapa que representa el carrito en un String para almacenarlo
-     * en una cookie.
+     * Convierte un mapa de carrito en una cadena de texto para almacenarlo en
+     * una cookie.
      *
-     * @param carrito Un mapa con `idProducto` como clave y `cantidad` como
+     * Toma un mapa que representa un carrito y lo convierte en una cadena de
+     * texto con el formato 'idProducto-cantidad', separando múltiples productos
+     * con dos puntos (:)
+     *
+     * @param carrito Un mapa con 'idProducto' como clave y 'cantidad' como
      * valor.
-     * @return Un String que representa los datos del carrito.
+     * @return Un String que representa el carrito.
      */
     public static String convertirCarritoACookie(Map<Short, Integer> carrito) {
         StringBuilder cookieValue = new StringBuilder();
@@ -86,10 +110,14 @@ public class Utils {
     }
 
     /**
-     * Actualiza la cookie "carrito" en la respuesta HTTP con los datos proporcionados en el mapa del carrito.
-     * @param response el objeto HttpServletResponse utilizado para agregar la cookie a la respuesta.
-     * @param carrito un mapa que representa el carrito de compras, donde la clave es el ID del producto 
-     *                y el valor que es la cantidad.
+     * Actualiza la cookie "carrito" en la respuesta HTTP.
+     *
+     * Toma un mapa que representa el carrito, lo convierte a formato de cadena
+     * utilizando el método 'convertirCarritoACookie()' y actualiza la cookie en
+     * la respuesta HTTP.
+     *
+     * @param response el objeto HttpServletResponse para agregar la cookie.
+     * @param carrito un mapa que representa el carrito.
      */
     public static void actualizarCookie(HttpServletResponse response, Map<Short, Integer> carrito) {
         String carritoStr = convertirCarritoACookie(carrito);
@@ -97,17 +125,24 @@ public class Utils {
         cookieCarrito.setMaxAge(172800); // 2 días
         response.addCookie(cookieCarrito);
     }
-    
+
     /**
-     * Comprueba que algún parámetro que se envie no esté vacío y que las contraseñas coincidan.
-     * @param parametros enumeration que contiene los nombres de los parámetros enviados.
-     * @param request el objeto HttpServletRequest que contiene los datos de la solicitud HTTP.
+     * Comprueba que los parámetros de la solicitud no estén vacíos y que las
+     * contraseñas coincidan.
+     *
+     * Recorre los parámetros de la solicitud y verifica si alguno está vacío.
+     * También verifica que los valores de "password" y "confirmPassword" sean
+     * iguales. Devuelve un código de error basado en la validación.
+     *
+     * @param parametros nombres de los parámetros enviados en la solicitud.
+     * @param request el objeto HttpServletRequest que contiene los datos de la
+     * solicitud.
      * @return un código de error:
- *         <ul>
- *             <li>"n" si no se encuentran errores.</li>
- *             <li>"v" si algún campo obligatorio está vacío.</li>
- *             <li>"c" si las contraseñas no coinciden.</li>
- *         </ul>
+     * <ul>
+     * <li>"n": No hay errores.</li>
+     * <li>"v": Algún campo está vacío.</li>
+     * <li>"c": Las contraseñas no son iguales.</li>
+     * </ul>
      */
     public static String comprobarCampos(Enumeration<String> parametros, HttpServletRequest request) {
         String error = "n";
@@ -117,14 +152,24 @@ public class Utils {
                 error = "v";
             }
         }
-        if(error.equals("n")) {
-            if(!request.getParameter("password").equals(request.getParameter("confirmPassword"))) {
+        if (error.equals("n")) {
+            if (!request.getParameter("password").equals(request.getParameter("confirmPassword"))) {
                 error = "c";
             }
         }
         return error;
     }
-    
+
+    /**
+     * Calcula el hash MD5 de una cadena de texto.
+     *
+     * Utiliza el algoritmo MD5 para calcular un hash hexadecimal de una cadena
+     * de entrada. Si ocurre algún error con el algoritmo, lanza una excepción
+     * de tiempo de ejecución.
+     *
+     * @param input la cadena de texto a hashear.
+     * @return el hash MD5 en formato hexadecimal.
+     */
     public static String hashMD5(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -133,7 +178,9 @@ public class Utils {
 
             for (byte b : messageDigest) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
                 hexString.append(hex);
             }
 
@@ -142,4 +189,88 @@ public class Utils {
             throw new RuntimeException("Error al calcular MD5", e);
         }
     }
+
+    /**
+     * Actualiza las líneas de pedido en base al contenido del carrito: 
+     * - Si el producto ya está en el pedido, actualiza su cantidad. 
+     * - Si no está en el pedido, crea una nueva línea de pedido y la agrega.
+     *
+     * @param pedido objeto pedido a sincronizar.
+     * @param carrito un mapa que representa el carrito
+     */
+    public static void actualizarPedidoDesdeCarrito(Pedido pedido, Map<Short, Integer> carrito) {
+        IProductoDAO prodDAO = DAOFactory.getDAOFactory().getProductoDAO();
+        // Crear un mapa para las líneas de pedido existentes por ID de producto
+        Map<Short, LineaPedido> lineasExistentes = new HashMap<>();
+        for (LineaPedido linea : pedido.getLineasPedidos()) {
+            lineasExistentes.put(linea.getProducto().getIdProducto(), linea);
+        }
+        // Iterar sobre el carrito
+        for (Map.Entry<Short, Integer> entry : carrito.entrySet()) {
+            Short idProducto = entry.getKey();
+            Integer cantidadEnCarrito = entry.getValue();
+            // Verificar si ya existe una línea de pedido para este producto
+            if (lineasExistentes.containsKey(idProducto)) {
+                // Actualizar la cantidad existente
+                LineaPedido lineaExistente = lineasExistentes.get(idProducto);
+                lineaExistente.setCantidad(cantidadEnCarrito.byteValue());
+            } else {
+                // Crear una nueva línea de pedido si no existe
+                Producto producto = prodDAO.getProductoPorID(idProducto);
+                LineaPedido nuevaLinea = new LineaPedido();
+                nuevaLinea.setProducto(producto);
+                nuevaLinea.setCantidad(cantidadEnCarrito.byteValue());
+                nuevaLinea.setPedido(pedido);
+                // Agregar la nueva línea al pedido
+                pedido.getLineasPedidos().add(nuevaLinea);
+            }
+        }
+    }
+
+    /**
+     * Recupera un pedido de la sesión del usuario.
+     *
+     * Busca un objeto Pedido en la sesión. Si no lo encuentra, crea un nuevo
+     * pedido y una lista de líneas de pedido, y lo devuelve.
+     *
+     * @param session obejto HttpSession que contiene los datos de la sesión.
+     * @return objeto pedido.
+     */
+    public static Pedido recuperarPedidoDeSesion(HttpSession session) {
+        List<LineaPedido> lineasPedido = new ArrayList<>();
+        Pedido pedido = (Pedido) session.getAttribute("pedido");
+
+        if (pedido == null) {
+            pedido = new Pedido();
+            pedido.setEstado(Pedido.Estado.c);
+            pedido.setFecha(new Date());
+            pedido.setLineasPedidos(lineasPedido);
+        }
+
+        return pedido;
+    }
+
+    /**
+     * Calcula el importe total de una lista de líneas de pedido.
+     *
+     * Recorre una lista de líneas de pedido y calcula el importe total
+     * multiplicando el precio del producto por la cantidad en cada línea.
+     *
+     * @param lineasPedidos lista de objetos LineaPedido.
+     * @return importe total.
+     */
+    public static double calcularImporteTotal(List<LineaPedido> lineasPedidos) {
+        if (lineasPedidos == null) {
+            return 0; // Si no hay líneas, el importe total es 0
+        }
+
+        double importeTotal = 0;
+        for (LineaPedido linea : lineasPedidos) {
+            if (linea.getProducto() != null && linea.getProducto().getPrecio() != null) {
+                importeTotal += linea.getProducto().getPrecio() * linea.getCantidad();
+            }
+        }
+        return importeTotal;
+    }
+
 }

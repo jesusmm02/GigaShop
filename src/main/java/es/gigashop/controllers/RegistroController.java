@@ -40,7 +40,8 @@ public class RegistroController extends HttpServlet {
         String accion = request.getParameter("accion");
 
         if (null == accion) {
-            // Caso 2: Registrar un nuevo usuario
+            // Registrar un nuevo usuario
+
             String url = "JSP/tienda.jsp";
 
             Usuario usuario;
@@ -55,8 +56,8 @@ public class RegistroController extends HttpServlet {
             if (!error.equals("n")) {
                 /*
                 * En el caso de que exista error se realizan las siguientes funciones:
-                *   - Cargamos un atributo de petición explicando lo acontecido
-                *   - Dirigimos el flujo hacia el formulario de entrada de datos para insertar
+                *   - Cargamos un atributo de petición con un mensaje de aviso
+                *   - Dirigimos el flujo hacia el formulario de registro para que se muestren los mensajes dependiendo del error
                  */
                 String aviso = "Las contraseñas no son iguales";
                 if (error.equals("v")) {
@@ -64,7 +65,7 @@ public class RegistroController extends HttpServlet {
                 }
                 request.setAttribute("errorCreate", aviso);
                 url = "/JSP/registro.jsp";
-            } else {
+            } else { // Si no hay errores
                 try {
                     usuario = new Usuario();
                     BeanUtils.populate(usuario, request.getParameterMap());
@@ -73,11 +74,12 @@ public class RegistroController extends HttpServlet {
                     Timestamp ahora = new Timestamp(new Date().getTime());
                     usuario.setUltimoAcceso(ahora);
 
-                    if (usuDAO.registrarUsuario(usuario)) {
+                    if (usuDAO.registrarUsuario(usuario)) { // Si el método devuelve emailRepetido = TRUE
                         request.setAttribute("errorCreate", "El usuario ya existe");
                         url = "/JSP/registro.jsp";
                     } else {
-                        session.setAttribute("usuario", usuario);
+                        session.removeAttribute("pedido");
+                        session.setAttribute("usuario", usuario); // Mete en sesión el nuevo usuario
                         request.setAttribute("usuRegistrado", "Se ha registrado el usuario <strong>" + usuario.getNombre() + "</strong> correctamente");
                         url = "/JSP/tienda.jsp";
                     }
@@ -89,18 +91,22 @@ public class RegistroController extends HttpServlet {
 
             request.getRequestDispatcher(url).forward(request, response);
         } else {
+            // Acciones AJAX de comprobar correo y generar letra del dni
             switch (accion) {
                 case "comprobarEmail": {
                     // Caso 1: Comprobar si el correo está disponible
                     String email = request.getParameter("email");
+
                     // Llamamos al DAO para verificar si el correo ya existe
                     DAOFactory daoF = DAOFactory.getDAOFactory();
                     IUsuarioDAO usuDAO = daoF.getUsuarioDAO();
                     boolean disponible = usuDAO.emailDisponible(email);
+
                     // Devolvemos un JSON indicando si el correo está disponible o no
                     response.setContentType("application/json");
                     response.setCharacterEncoding("UTF-8");
                     response.getWriter().write("{\"disponible\": " + disponible + "}");
+
                     break;
                 }
                 case "generarDni": {
@@ -127,20 +133,22 @@ public class RegistroController extends HttpServlet {
                 }
 
                 default: {
-                    // Caso 2: Registrar un nuevo usuario
+                    // Por defecto registra un nuevo usuario
                     String url = "JSP/tienda.jsp";
+
                     Usuario usuario;
                     DAOFactory daoF = DAOFactory.getDAOFactory();
                     IUsuarioDAO usuDAO = daoF.getUsuarioDAO();
                     HttpSession session = request.getSession();
+
                     // Comprobamos que todos los campos estén rellenos y que las contraseñas coincidan
                     Enumeration<String> parametros = request.getParameterNames();
                     String error = Utils.comprobarCampos(parametros, request);
                     if (!error.equals("n")) {
                         /*
-                        * En el caso de que exista error se realizan las siguientes funciones:
-                        *   - Cargamos un atributo de petición explicando lo acontecido
-                        *   - Dirigimos el flujo hacia el formulario de entrada de datos para insertar
+                * En el caso de que exista error se realizan las siguientes funciones:
+                *   - Cargamos un atributo de petición con un mensaje de aviso
+                *   - Dirigimos el flujo hacia el formulario de registro para que se muestren los mensajes dependiendo del error
                          */
                         String aviso = "Las contraseñas no son iguales";
                         if (error.equals("v")) {
@@ -148,7 +156,7 @@ public class RegistroController extends HttpServlet {
                         }
                         request.setAttribute("errorCreate", aviso);
                         url = "/JSP/registro.jsp";
-                    } else {
+                    } else { // Si no hay errores
                         try {
                             usuario = new Usuario();
                             BeanUtils.populate(usuario, request.getParameterMap());
@@ -157,11 +165,11 @@ public class RegistroController extends HttpServlet {
                             Timestamp ahora = new Timestamp(new Date().getTime());
                             usuario.setUltimoAcceso(ahora);
 
-                            if (usuDAO.registrarUsuario(usuario)) {
+                            if (usuDAO.registrarUsuario(usuario)) { // Si el método devuelve emailRepetido = TRUE
                                 request.setAttribute("errorCreate", "El usuario ya existe");
                                 url = "/JSP/registro.jsp";
                             } else {
-                                session.setAttribute("usuario", usuario);
+                                session.setAttribute("usuario", usuario); // Mete en sesión el nuevo usuario
                                 request.setAttribute("usuRegistrado", "Se ha registrado el usuario <strong>" + usuario.getNombre() + "</strong> correctamente");
                                 url = "/JSP/tienda.jsp";
                             }
