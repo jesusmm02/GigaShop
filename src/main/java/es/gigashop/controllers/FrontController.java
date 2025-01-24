@@ -114,6 +114,7 @@ public class FrontController extends HttpServlet {
 
                         if (session != null) {
                             session.removeAttribute("usuario");
+                            session.removeAttribute("pedido");
                         }
 
                         request.setAttribute("logout", "Se ha cerrado la sesión.");

@@ -122,6 +122,9 @@ public class PedidoDAO implements IPedidoDAO {
      */
     @Override
     public List<LineaPedido> obtenerLineasPedido(Short idPedido) {
+        if (idPedido == null) {
+            throw new IllegalArgumentException("El ID del pedido no puede ser nulo");
+        }
         List<LineaPedido> lineas = new ArrayList<>();
         Connection conn = null;
         PreparedStatement stmt = null;

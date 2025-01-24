@@ -19,6 +19,13 @@ public interface ILineaPedidoDAO {
     public void insertarOActualizarLineaPedido(LineaPedido lineaPedido);
     
     /**
+     * 
+     * @param idPedido
+     * @param idProducto 
+     */
+    public void eliminarLineaPedido(short idPedido, short idProducto);
+    
+    /**
      * Abandona el hilo del pool de conexiones
      */
     public void closeConnection();

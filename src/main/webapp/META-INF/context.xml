@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Context path="/GigaShop">
+<Context docBase="GigaShop" path="/GigaShop">
     <Resource auth="Container"
         driverClassName="com.mysql.jdbc.Driver"
         maxActive="100"
         maxIdle="30" 
         maxWait="10000" 
         name="jdbc/GigaShop" 
-        password="adminGigaShop" 
+        password="123" 
         type="javax.sql.DataSource" 
         url="jdbc:mysql://localhost:3306/gigashop" 
-        username="adminGigaShop"/>
+        username="gigashop"/>
 </Context>

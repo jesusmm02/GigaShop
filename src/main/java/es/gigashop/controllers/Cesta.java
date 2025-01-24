@@ -115,37 +115,76 @@ public class Cesta extends HttpServlet {
                 if (idProductoStr != null && !idProductoStr.isEmpty()) {
                     short idProducto = Short.parseShort(idProductoStr);
 
-                    // Elimina completamente el producto del carrito
-                    carrito.remove(idProducto);  // Elimina el producto por su id
+                    Usuario usuario = (Usuario) session.getAttribute("usuario");
 
-                    Pedido pedido = Utils.recuperarPedidoDeSesion(session);
+                    if (usuario != null) {
+                        DAOFactory daoF = DAOFactory.getDAOFactory();
+                        IPedidoDAO pdiDAO = daoF.getPedidoDAO();
+                        ILineaPedidoDAO lnpDAO = daoF.getLineaPedidoDAO();
+                        IProductoDAO proDAO = daoF.getProductoDAO();
 
-                    // Lista de productos de mi carrito
-                    List<LineaPedido> lineasPedidos = pedido.getLineasPedidos();
+                        Pedido pedido = (Pedido) session.getAttribute("pedido");
 
-                    Iterator<LineaPedido> iterator = lineasPedidos.iterator();
-                    while (iterator.hasNext()) {
-                        LineaPedido lpe = iterator.next();
-                        if (lpe.getProducto().getIdProducto() == idProducto) {
-                            iterator.remove(); // Elimina el producto de forma segura
+                        if (pedido != null) {
+                            // Eliminar línea de pedido específica
+                            lnpDAO.eliminarLineaPedido(pedido.getIdPedido(), idProducto);
+
+                            // Recuperar líneas de pedido actualizadas
+                            List<LineaPedido> lineasPedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
+                            for (LineaPedido linea : lineasPedidos) {
+                                Producto producto = proDAO.getProductoPorID(linea.getProducto().getIdProducto());
+                                linea.setProducto(producto);
+                            }
+
+                            pedido.setLineasPedidos(lineasPedidos);
+                            pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
+                            pedido.setIva(pedido.getImporte() * 0.21);
+                            session.setAttribute("pedido", pedido);
+
+                            if (lineasPedidos.isEmpty()) {
+                                session.removeAttribute("pedido");
+                                request.setAttribute("prodElim", "El carrito se ha vaciado por completo.");
+                                url = "JSP/tienda.jsp";
+                            } else {
+                                request.setAttribute("prodElim", "Se ha eliminado el producto del carrito.");
+                                url = "JSP/carrito.jsp";
+                            }
                         }
-                    }
+                        
+                    } else { // Usuario anónimo
 
-                    pedido.setLineasPedidos(lineasPedidos);
-                    pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
-                    pedido.setIva(pedido.getImporte() * 0.21);
-                    session.setAttribute("pedido", pedido);
+                        // Elimina completamente el producto del carrito
+                        carrito.remove(idProducto);  // Elimina el producto por su id
 
-                    Utils.actualizarCookie(response, carrito);
+                        Pedido pedido = Utils.recuperarPedidoDeSesion(session);
 
-                    if (carrito.isEmpty()) {
-                        session.removeAttribute("pedido");
-                        request.setAttribute("prodElim", "El carrito se ha vaciado por completo.");
-                        url = "JSP/tienda.jsp";
-                    } else {
-                        // Mensaje de confirmación
-                        request.setAttribute("prodElim", "Se ha eliminado el producto del carrito.");
-                        url = "JSP/carrito.jsp";
+                        // Lista de productos de mi carrito
+                        List<LineaPedido> lineasPedidos = pedido.getLineasPedidos();
+
+                        Iterator<LineaPedido> iterator = lineasPedidos.iterator();
+                        while (iterator.hasNext()) {
+                            LineaPedido lpe = iterator.next();
+                            if (lpe.getProducto().getIdProducto() == idProducto) {
+                                iterator.remove(); // Elimina el producto de forma segura
+                            }
+                        }
+
+                        pedido.setLineasPedidos(lineasPedidos);
+                        pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
+                        pedido.setIva(pedido.getImporte() * 0.21);
+                        session.setAttribute("pedido", pedido);
+
+                        Utils.actualizarCookie(response, carrito);
+
+                        if (carrito.isEmpty()) {
+                            session.removeAttribute("pedido");
+                            request.setAttribute("prodElim", "El carrito se ha vaciado por completo.");
+                            url = "JSP/tienda.jsp";
+                        } else {
+                            // Mensaje de confirmación
+                            request.setAttribute("prodElim", "Se ha eliminado el producto del carrito.");
+                            url = "JSP/carrito.jsp";
+                        }
                     }
                 }
             } else if (request.getParameter("annadir") != null) {
@@ -181,21 +220,19 @@ public class Cesta extends HttpServlet {
                             // Inserta el nuevo pedido en la base de datos
                             Short idPedido = pdiDAO.insertarPedido(pedido);
 
-                            System.out.println("ID Pedido que devuelve el método dao: " + idPedido);
-
                             pedido.setIdPedido(idPedido);
-                        
+
                         } else {
-                            
+
                             // Si ya existe un pedido, recupera sus líneas de pedido
                             List<LineaPedido> lineaspedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
-                            
+
                             // Completa los detalles del producto para cada línea de pedido
                             for (LineaPedido linea : lineaspedidos) {
                                 Producto producto = proDAO.getProductoPorID(linea.getProducto().getIdProducto());
                                 linea.setProducto(producto);
                             }
-                            
+
                             pedido.setLineasPedidos(lineaspedidos);
                         }
 
@@ -205,7 +242,7 @@ public class Cesta extends HttpServlet {
                         if (pedido.getLineasPedidos() == null) {
                             pedido.setLineasPedidos(new ArrayList<LineaPedido>());
                         }
-                        
+
                         if (lineaPedido == null) {
                             lineaPedido = new LineaPedido();
                             lineaPedido.setPedido(pedido);
@@ -216,22 +253,29 @@ public class Cesta extends HttpServlet {
                         } else {
                             // Incrementar la cantidad si ya existe
                             byte cantidadActual = lineaPedido.getCantidad();
-                            lineaPedido.setCantidad((byte)(cantidadActual + 1));
+                            lineaPedido.setCantidad((byte) (cantidadActual + 1));
                         }
 
                         // Inserta o actualiza la línea de pedido en la base de datos
                         lnpDAO.insertarOActualizarLineaPedido(lineaPedido);
 
+                        // Recuperar de nuevo las líneas de pedido para asegurar datos actualizados
+                        List<LineaPedido> lineasPedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
+                        for (LineaPedido linea : lineasPedidos) {
+                            Producto producto = proDAO.getProductoPorID(linea.getProducto().getIdProducto());
+                            linea.setProducto(producto);
+                        }
+                        pedido.setLineasPedidos(lineasPedidos);
+
                         // Actualiza la sesión y el importe del pedido
                         pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
                         pedido.setIva(pedido.getImporte() * 0.21);
                         session.setAttribute("pedido", pedido);
-                        
-                        System.out.println("Pedido recuperado: " + pedido);
-                        System.out.println("Líneas de pedido: " + pedido.getLineasPedidos());
-                        System.out.println("Producto añadido ID: " + idProducto);
 
-                    } else {
+                        // Mensaje de confirmación
+                        request.setAttribute("añadido", "Se ha añadido un producto al carrito.");
+
+                    } else { // Usuario anónimo
 
                         idProducto = Short.parseShort(idProductoStr);
 

@@ -124,6 +124,42 @@ public class LineaPedidoDAO implements ILineaPedidoDAO {
     }
 
     @Override
+    public void eliminarLineaPedido(short idPedido, short idProducto) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = ConnectionFactory.getConnection();
+            String sql = "DELETE FROM lineaspedidos WHERE idPedido = ? AND idProducto = ?";
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setShort(1, idPedido);
+            pstmt.setShort(2, idProducto);
+
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error al eliminar línea de pedido: " + e.getMessage());
+            throw new RuntimeException("No se pudo eliminar la línea de pedido", e);
+        } finally {
+            // Cerrar recursos
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                    System.err.println("Error al cerrar PreparedStatement: " + e.getMessage());
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Error al cerrar conexión: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
     public void closeConnection() {
         ConnectionFactory.closeConnection();
     }
