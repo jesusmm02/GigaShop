@@ -150,7 +150,7 @@ public class Cesta extends HttpServlet {
                                 url = "JSP/carrito.jsp";
                             }
                         }
-                        
+
                     } else { // Usuario anónimo
 
                         // Elimina completamente el producto del carrito
@@ -194,20 +194,25 @@ public class Cesta extends HttpServlet {
 
                     Short idProducto = Short.parseShort(idProductoStr);
 
+                    System.out.println("Intento de añadir producto: " + idProducto);
+
                     Usuario usuario = (Usuario) session.getAttribute("usuario");
 
                     if (usuario != null) {
+                        System.out.println("Añadiendo producto para usuario: " + usuario.getNombre());
                         DAOFactory daoF = DAOFactory.getDAOFactory();
                         IPedidoDAO pdiDAO = daoF.getPedidoDAO();
                         IProductoDAO proDAO = daoF.getProductoDAO();
 
-                        Pedido pedido = (Pedido) session.getAttribute("pedido");
+                        System.out.println("No hay pedido en sesión, buscando pedido existente");
+                        Pedido pedido = pdiDAO.obtenerPedidoPorUsuario(usuario.getIdUsuario());
 
-                        if (pedido == null) {
-                            pedido = pdiDAO.obtenerPedidoPorUsuario(usuario.getIdUsuario());
-                        }
+                        List<LineaPedido> lineasPedidos = (pedido != null)
+                                ? pdiDAO.obtenerLineasPedido(pedido.getIdPedido())
+                                : null;
 
-                        if (pedido == null) {
+                        if (lineasPedidos == null) {
+                            System.out.println("Creando nuevo pedido para usuario");
                             pedido = new Pedido();
                             List<LineaPedido> lineaspedidos = new ArrayList();
                             pedido.setFecha(new Date());
@@ -217,15 +222,31 @@ public class Cesta extends HttpServlet {
                             pedido.setIva(0.0);
                             pedido.setLineasPedidos(lineaspedidos);
 
+                            System.out.println("Intentando insertar nuevo pedido para usuario: " + usuario.getNombre());
+
                             // Inserta el nuevo pedido en la base de datos
                             Short idPedido = pdiDAO.insertarPedido(pedido);
 
+                            if (idPedido == null) {
+                                System.out.println("Fallo al crear pedido para usuario: " + usuario.getNombre());
+                                throw new ServletException("No se pudo crear un nuevo pedido para el usuario.");
+                            }
+
+                            System.out.println("Pedido creado con ID: " + idPedido);
                             pedido.setIdPedido(idPedido);
+
+                            session.setAttribute("pedido", pedido);
 
                         } else {
 
+                            System.out.println("Pedido existente encontrado en ID: " + pedido.getIdPedido());
+
                             // Si ya existe un pedido, recupera sus líneas de pedido
                             List<LineaPedido> lineaspedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
+
+                            if (lineaspedidos == null) {
+                                lineaspedidos = new ArrayList<>(); // Evita NullPointerException
+                            }
 
                             // Completa los detalles del producto para cada línea de pedido
                             for (LineaPedido linea : lineaspedidos) {
@@ -238,10 +259,6 @@ public class Cesta extends HttpServlet {
 
                         ILineaPedidoDAO lnpDAO = daoF.getLineaPedidoDAO();
                         LineaPedido lineaPedido = lnpDAO.obtenerLineaPedido(pedido.getIdPedido(), idProducto);
-
-                        if (pedido.getLineasPedidos() == null) {
-                            pedido.setLineasPedidos(new ArrayList<LineaPedido>());
-                        }
 
                         if (lineaPedido == null) {
                             lineaPedido = new LineaPedido();
@@ -260,7 +277,7 @@ public class Cesta extends HttpServlet {
                         lnpDAO.insertarOActualizarLineaPedido(lineaPedido);
 
                         // Recuperar de nuevo las líneas de pedido para asegurar datos actualizados
-                        List<LineaPedido> lineasPedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
+                        lineasPedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
                         for (LineaPedido linea : lineasPedidos) {
                             Producto producto = proDAO.getProductoPorID(linea.getProducto().getIdProducto());
                             linea.setProducto(producto);

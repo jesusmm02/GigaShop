@@ -9,6 +9,7 @@ import es.gigashop.beans.LineaPedido;
 import es.gigashop.beans.Pedido;
 
 import es.gigashop.beans.Producto;
+import es.gigashop.beans.Usuario;
 
 import es.gigashop.models.Utils;
 
@@ -125,12 +126,102 @@ public class FrontController extends HttpServlet {
                     case "carrito":
                         url = "/JSP/carrito.jsp";
                         break;
+                    case "comprar":
+                        // Verifica si hay usuario en sesión
+                        Usuario usuario = (Usuario) session.getAttribute("usuario");
+                        
+                        if (usuario != null) {
+                            Pedido pedidoCompra = (Pedido) session.getAttribute("pedido");
+                            
+                            if (pedidoCompra != null) {
+                                try {
+                                    // Cambiar estado del pedido a 'f' (finalizado)
+                                    pedidoCompra.setEstado(Pedido.Estado.f);
+                                    
+                                    // Actualizar en la base de datos
+                                    DAOFactory daoF = DAOFactory.getDAOFactory();
+                                    daoF.getPedidoDAO().actualizarEstadoPedido(pedidoCompra);
+                                    
+                                    // Obtener las líneas de pedidos finalizados para el modal
+                                    List<LineaPedido> lineasFinalizadas = daoF.getPedidoDAO()
+                                            .obtenerLineasPedidosFinalizados(usuario.getIdUsuario());
+                                    
+                                    // Limpiar el carrito
+                                    session.removeAttribute("pedido");
+                                    session.removeAttribute("carrito");
+                                    
+                                    // Guardar líneas finalizadas para el modal
+                                    request.setAttribute("lineasFinalizadas", lineasFinalizadas);
+                                    request.setAttribute("compraExitosa", "El pedido ha sido confirmado y finalizado");
+                                    
+                                } catch (Exception e) {
+                                    request.setAttribute("compraError", "Hubo un error al finalizar el pedido.");
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                request.setAttribute("compraError", "No hay pedido activo para confirmar.");
+                            }
+                        } else {
+                            request.setAttribute("compraError", "Debes iniciar sesión para confirmar la compra.");
+                        }
+                        
+                        url = "JSP/tienda.jsp";
+                        
+                        break;
                     case "eliminarCarro":
-                        Map<Short, Integer> carritoVacio = new HashMap<>();
-                        session.removeAttribute("pedido");
-                        session.removeAttribute("carrito");
-                        Utils.actualizarCookie(response, carritoVacio);
-                        request.setAttribute("elimCarrito", "Se ha eliminado el carrito");
+                        // Recupera la sesión actual
+                        session = request.getSession();
+
+                        // Verifica si hay usuario en sesión
+                        usuario = (Usuario) session.getAttribute("usuario");
+
+                        if (usuario != null) {
+                            // Caso de usuario autenticado
+                            Pedido pedidoEliminar = (Pedido) session.getAttribute("pedido");
+
+                            if (pedidoEliminar != null) {
+                                try {
+                                    // Llama al DAO para eliminar el pedido en la base de datos
+                                    DAOFactory daoF = DAOFactory.getDAOFactory();
+                                    daoF.getPedidoDAO().eliminarPedido(pedidoEliminar.getIdPedido());
+
+                                    // Limpia el carrito y la sesión
+                                    session.removeAttribute("pedido");
+                                    session.removeAttribute("carrito");
+
+                                    // Actualiza la cookie del carrito
+                                    Map<Short, Integer> carritoVacio = new HashMap<>();
+                                    Utils.actualizarCookie(response, carritoVacio);
+
+                                    // Mensaje de confirmación para la vista
+                                    request.setAttribute("elimCarrito", "El pedido del usuario ha sido eliminado correctamente");
+                                } catch (Exception e) {
+                                    // Manejo de errores
+                                    request.setAttribute("elimCarrito", "Hubo un error al eliminar el carrito del usuario.");
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                request.setAttribute("elimCarrito", "No hay pedido del usuario para eliminar.");
+                            }
+                        } else { // Caso de usuario anónimo
+                            try {
+                                // Limpia solo la cookie del carrito
+                                Map<Short, Integer> carritoVacio = new HashMap<>();
+                                Utils.actualizarCookie(response, carritoVacio);
+
+                                // Limpia el carrito en la sesión (por si existe)
+                                session.removeAttribute("carrito");
+
+                                // Mensaje de confirmación para la vista
+                                request.setAttribute("elimCarrito", "El carrito anónimo ha sido eliminado correctamente.");
+                            } catch (Exception e) {
+                                // Manejo de errores
+                                request.setAttribute("elimCarrito", "Hubo un error al eliminar el carrito anónimo.");
+                                e.printStackTrace();
+                            }
+                        }
+
+                        url= "/JSP/tienda.jsp";
                         break;
                     case "verDetalles":
                         // Procesar ver detalles del producto

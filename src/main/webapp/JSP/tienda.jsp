@@ -49,11 +49,17 @@
             <%@ include file="/INC/barra.jsp" %>
 
             <!-- Mensaje flotante de aviso -->
-            <c:if test="${not empty añadido || not empty elimCarrito || not empty prodElim || not empty usuRegistrado || not empty login || not empty logout}">
+            <c:if test="${not empty añadido || not empty compraExitosa || not empty compraError || not empty elimCarrito || not empty prodElim || not empty usuRegistrado || not empty login || not empty logout}">
                 <div id="mensajeFlotante" class="mensaje-flotante">
                     <c:choose>
                         <c:when test="${not empty añadido}">
                             ${añadido}
+                        </c:when>
+                        <c:when test="${not empty compraExitosa}">
+                            ${compraExitosa}
+                        </c:when>
+                        <c:when test="${not empty compraError}">
+                            ${compraError}
                         </c:when>
                         <c:when test="${not empty elimCarrito}">
                             ${elimCarrito}
@@ -115,7 +121,7 @@
                     }
                 }
             </style>
-            
+
         </div>
 
 
@@ -243,12 +249,55 @@
                                     <img src="${contexto}/IMG/no-result-found.jpg" alt="No hay resultados" class="img-fluid mt-5">
                                 </div>
                             </c:otherwise>
-                        </c:choose>
+                        </c:choose>           
                     </div>
                 </div>
 
 
 
+            </div>
+        </div>
+
+        <!-- Modal para las líneas de pedidos finalizados -->
+        <div class="modal fade" id="modalPedidosFinalizados" tabindex="-1" aria-labelledby="modalPedidosFinalizadosLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalPedidosFinalizadosLabel">Líneas de Pedidos Finalizados</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Imagen</th>
+                                    <th>Producto</th>
+                                    <th>Precio Unitario</th>
+                                    <th>Cantidad</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="linea" items="${lineasFinalizadas}">
+                                    <tr>
+                                        <td>
+                                            <img src="${contexto}/IMG/productos/${linea.producto.imagen}.jpg" alt="${linea.producto.nombre}" style="max-width: 80px;">
+                                        </td>
+                                        <td>${linea.producto.nombre}</td>
+                                        <td><fmt:formatNumber value="${linea.producto.precio}" type="currency" /></td>
+                                        <td>${linea.cantidad}</td>
+                                        <td><fmt:formatNumber value="${linea.cantidad * linea.producto.precio}" type="currency" /></td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
             </div>
         </div>
 

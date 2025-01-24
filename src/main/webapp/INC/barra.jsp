@@ -24,6 +24,12 @@
                 <div class="ml-auto d-flex align-items-center">
                     <c:choose>
                         <c:when test="${not empty sessionScope.usuario}">
+                            <!-- Botón para mostrar el modal -->
+                            <c:if test="${not empty lineasFinalizadas}">
+                                <button type="button" class="btn btn-info mt-3" data-bs-toggle="modal" data-bs-target="#modalPedidosFinalizados">
+                                    Ver pedidos finalizados
+                                </button>
+                            </c:if>
                             <form action="FrontController" method="POST" class="mr-2">
                                 <button type="submit" class="btn btn-outline-danger" name="boton" value="logout">Cerrar sesión</button>
                             </form>

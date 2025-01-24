@@ -130,11 +130,11 @@ public class PedidoDAO implements IPedidoDAO {
         PreparedStatement stmt = null;
         ResultSet rs = null;
 
-        String sql = "SELECT lp.idLinea, lp.idProducto, lp.cantidad, " +
-                 "p.nombre, p.precio, p.marca, p.imagen " +
-                 "FROM lineaspedidos lp " +
-                 "JOIN productos p ON lp.idProducto = p.idProducto " +
-                 "WHERE lp.idPedido = ?";
+        String sql = "SELECT lp.idLinea, lp.idProducto, lp.cantidad, "
+                + "p.nombre, p.precio, p.marca, p.imagen "
+                + "FROM lineaspedidos lp "
+                + "JOIN productos p ON lp.idProducto = p.idProducto "
+                + "WHERE lp.idPedido = ?";
 
         try {
             conn = ConnectionFactory.getConnection();
@@ -156,7 +156,7 @@ public class PedidoDAO implements IPedidoDAO {
                 producto.setPrecio(rs.getDouble("precio"));
                 producto.setMarca(rs.getString("marca"));
                 producto.setImagen(rs.getString("imagen"));
-                
+
                 linea.setProducto(producto);
                 linea.setCantidad(rs.getByte("cantidad"));
 
@@ -183,73 +183,70 @@ public class PedidoDAO implements IPedidoDAO {
         return lineas;
     }
 
-    /*
     @Override
-    public void guardarPedido(Pedido pedido) {
-        Connection conn = null;
-        PreparedStatement stmtPedido = null;
-        PreparedStatement stmtLinea = null;
-
-        String sqlPedido = "INSERT INTO pedidos (fecha, estado, usuario_id, importe, iva) VALUES (?, ?, ?, ?, ?)";
-        String sqlLinea = "INSERT INTO lineaspedidos (pedido_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)";
-
-        try {
-            conn = dataSource.getConnection();
-            conn.setAutoCommit(false); // Transacción
-
-            // Guardar el pedido
-            stmtPedido = conn.prepareStatement(sqlPedido, Statement.RETURN_GENERATED_KEYS);
-            stmtPedido.setDate(1, new java.sql.Date(pedido.getFecha().getTime()));
-            stmtPedido.setString(2, pedido.getEstado().name());
-            stmtPedido.setObject(3, pedido.getUsuario() != null ? pedido.getUsuario().getIdUsuario() : null);
-            stmtPedido.setDouble(4, pedido.getImporte());
-            stmtPedido.setDouble(5, pedido.getIva());
-            stmtPedido.executeUpdate();
-
-            // Obtener el ID generado
-            ResultSet rs = stmtPedido.getGeneratedKeys();
-            if (rs.next()) {
-                pedido.setIdPedido(rs.getShort(1));
-            }
-
-            // Guardar las líneas de pedido
-            stmtLinea = conn.prepareStatement(sqlLinea);
-            for (LineaPedido linea : pedido.getLineasPedidos()) {
-                stmtLinea.setShort(1, pedido.getIdPedido());
-                stmtLinea.setShort(2, linea.getProducto().getIdProducto());
-                stmtLinea.setInt(3, linea.getCantidad());
-                stmtLinea.setDouble(4, linea.getProducto().getPrecio());
-                stmtLinea.addBatch(); // Agregar al batch
-            }
-            stmtLinea.executeBatch(); // Ejecutar batch
-
-            conn.commit(); // Confirmar transacción
-        } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback(); // Deshacer cambios en caso de error
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            e.printStackTrace();
-        } finally {
-            try {
-                if (stmtPedido != null) {
-                    stmtPedido.close();
-                }
-                if (stmtLinea != null) {
-                    stmtLinea.close();
-                }
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+    public void actualizarEstadoPedido(Pedido pedido) throws SQLException {
+        String query = "UPDATE pedidos SET estado = ? WHERE idPedido = ?";
+        try (Connection con = dataSource.getConnection(); PreparedStatement ps = con.prepareStatement(query)) {
+            ps.setString(1, String.valueOf(pedido.getEstado()));
+            ps.setInt(2, pedido.getIdPedido());
+            ps.executeUpdate();
         }
     }
-     */
+
+    @Override
+    public List<LineaPedido> obtenerLineasPedidosFinalizados(int idUsuario) throws SQLException {
+        List<LineaPedido> lineas = new ArrayList<>();
+        String query = "SELECT lp.*, p.nombre, p.precio, p.imagen "
+                + "FROM lineaspedidos lp "
+                + "JOIN productos p ON lp.idProducto = p.idProducto "
+                + "JOIN pedidos pe ON lp.idPedido = pe.idPedido "
+                + "WHERE pe.idUsuario = ? AND pe.estado = 'f'";
+        try (Connection con = dataSource.getConnection(); PreparedStatement ps = con.prepareStatement(query)) {
+            ps.setInt(1, idUsuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    LineaPedido linea = new LineaPedido();
+                    Producto producto = new Producto();
+
+                    // Datos del producto
+                    producto.setIdProducto(rs.getShort("idProducto"));
+                    producto.setNombre(rs.getString("nombre"));
+                    producto.setPrecio(rs.getDouble("precio"));
+                    producto.setImagen(rs.getString("imagen"));
+
+                    // Datos de la línea de pedido
+                    linea.setProducto(producto);
+                    linea.setCantidad(rs.getByte("cantidad"));
+
+                    lineas.add(linea);
+                }
+            }
+        }
+        return lineas;
+    }
+
+    @Override
+    public boolean eliminarPedido(Short idPedido) {
+        String sqlEliminarPedido = "DELETE FROM pedidos WHERE idPedido = ?";
+        String sqlEliminarLineasPedido = "DELETE FROM lineaspedidos WHERE idPedido = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection(); PreparedStatement stmtLineas = conn.prepareStatement(sqlEliminarLineasPedido); PreparedStatement stmtPedido = conn.prepareStatement(sqlEliminarPedido)) {
+
+            // Eliminar las líneas del pedido
+            stmtLineas.setShort(1, idPedido);
+            stmtLineas.executeUpdate();
+
+            // Eliminar el pedido
+            stmtPedido.setShort(1, idPedido);
+            int filasAfectadas = stmtPedido.executeUpdate();
+
+            return filasAfectadas > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     @Override
     public void closeConnection() {
         ConnectionFactory.closeConnection();
