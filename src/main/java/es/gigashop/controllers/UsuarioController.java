@@ -114,6 +114,22 @@ public class UsuarioController extends HttpServlet {
                                 session.setAttribute("pedido", pedido);
                             }
 
+                            try {
+                                // NUEVA LÓGICA PARA CARGAR PEDIDOS FINALIZADOS Y SUS LÍNEAS
+                                IPedidoDAO pedDAO = daoF.getPedidoDAO();
+                                List<Pedido> pedidosFinalizados = pedDAO.obtenerPedidosPorEstadoYUsuario("f", usuario.getIdUsuario());
+
+                                for (Pedido pedidoFinalizado : pedidosFinalizados) {
+                                    List<LineaPedido> lineas = pedDAO.obtenerLineasPedido(pedidoFinalizado.getIdPedido());
+                                    pedidoFinalizado.setLineasPedidos(lineas); // Asocia las líneas al pedido
+                                }
+
+                                session.setAttribute("pedidosFinalizados", pedidosFinalizados);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                // Puedes manejar el error mostrando un mensaje o redirigiendo a una página de error
+                                request.setAttribute("error", "Hubo un problema al cargar los pedidos finalizados.");
+                            }
                             request.setAttribute("login", "Se ha logueado el usuario " + "<strong>" + usuario.getNombre() + "</strong>");
                             request.getRequestDispatcher("/JSP/tienda.jsp").forward(request, response);
                         } else {

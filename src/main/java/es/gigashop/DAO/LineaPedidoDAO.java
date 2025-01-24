@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LineaPedidoDAO implements ILineaPedidoDAO {
 
@@ -69,6 +71,73 @@ public class LineaPedidoDAO implements ILineaPedidoDAO {
         }
 
         return lineaPedido;
+    }
+
+    @Override
+    public List<LineaPedido> obtenerLineasPedido(Short idPedido) throws Exception {
+        if (idPedido == null) {
+            throw new IllegalArgumentException("El ID del pedido no puede ser nulo");
+        }
+
+        List<LineaPedido> lineas = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        String query = "SELECT lp.idLinea, lp.idProducto, lp.cantidad, "
+                + "p.nombre, p.precio, p.marca, p.imagen "
+                + "FROM lineaspedidos lp "
+                + "JOIN productos p ON lp.idProducto = p.idProducto "
+                + "WHERE lp.idPedido = ?";
+
+        try {
+            conn = ConnectionFactory.getConnection();
+            stmt = conn.prepareStatement(query);
+            stmt.setShort(1, idPedido);
+
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                LineaPedido linea = new LineaPedido();
+                linea.setIdLinea(rs.getShort("idLinea"));
+
+                // Asociar pedido al que pertenece la línea
+                Pedido pedido = new Pedido();
+                pedido.setIdPedido(idPedido);
+                linea.setPedido(pedido);
+
+                // Crear producto asociado
+                Producto producto = new Producto();
+                producto.setIdProducto(rs.getShort("idProducto"));
+                producto.setNombre(rs.getString("nombre"));
+                producto.setPrecio(rs.getDouble("precio"));
+                producto.setMarca(rs.getString("marca"));
+                producto.setImagen(rs.getString("imagen"));
+
+                linea.setProducto(producto);
+                linea.setCantidad(rs.getByte("cantidad"));
+
+                lineas.add(linea);
+            }
+        } catch (SQLException e) {
+            throw new Exception("Error al obtener las líneas del pedido", e);
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return lineas;
     }
 
     @Override

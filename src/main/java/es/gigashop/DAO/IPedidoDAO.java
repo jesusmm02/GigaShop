@@ -7,12 +7,6 @@ import java.util.List;
 
 
 public interface IPedidoDAO {
-
-    /**
-     * 
-     * @param pedido 
-     */
-    //public void guardarPedido(Pedido pedido);
     
     /**
      * 
@@ -37,6 +31,15 @@ public interface IPedidoDAO {
     
     /**
      * 
+     * @param estado
+     * @param idUsuario
+     * @return
+     * @throws Exception 
+     */
+    public List<Pedido> obtenerPedidosPorEstadoYUsuario(String estado, int idUsuario) throws Exception;
+    
+    /**
+     * 
      * @param pedido
      * @throws SQLException 
      */
@@ -45,7 +48,7 @@ public interface IPedidoDAO {
     /**
      * 
      * @param idUsuario
-     * @return 
+     * @return
      */
     public List<LineaPedido> obtenerLineasPedidosFinalizados(int idUsuario) throws SQLException;
     

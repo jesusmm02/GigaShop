@@ -258,48 +258,108 @@
             </div>
         </div>
 
-        <!-- Modal para las líneas de pedidos finalizados -->
+        
+        <!-- Modal para pedidos finalizados -->
         <div class="modal fade" id="modalPedidosFinalizados" tabindex="-1" aria-labelledby="modalPedidosFinalizadosLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="modalPedidosFinalizadosLabel">Líneas de Pedidos Finalizados</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <h5 class="modal-title" id="modalPedidosFinalizadosLabel">Pedidos Finalizados</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
                     <div class="modal-body">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Imagen</th>
-                                    <th>Producto</th>
-                                    <th>Precio Unitario</th>
-                                    <th>Cantidad</th>
-                                    <th>Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <c:forEach var="linea" items="${lineasFinalizadas}">
-                                    <tr>
-                                        <td>
-                                            <img src="${contexto}/IMG/productos/${linea.producto.imagen}.jpg" alt="${linea.producto.nombre}" style="max-width: 80px;">
-                                        </td>
-                                        <td>${linea.producto.nombre}</td>
-                                        <td><fmt:formatNumber value="${linea.producto.precio}" type="currency" /></td>
-                                        <td>${linea.cantidad}</td>
-                                        <td><fmt:formatNumber value="${linea.cantidad * linea.producto.precio}" type="currency" /></td>
-                                    </tr>
+                        <c:if test="${not empty sessionScope.pedidosFinalizados}">
+                            <div class="accordion" id="accordionPedidos">
+                                <c:forEach var="pedido" items="${sessionScope.pedidosFinalizados}">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="heading${pedido.idPedido}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#collapse${pedido.idPedido}" aria-expanded="false"
+                                                    aria-controls="collapse${pedido.idPedido}">
+                                                Pedido #${pedido.idPedido} - Fecha: ${pedido.fecha}
+                                            </button>
+                                        </h2>
+                                        <div id="collapse${pedido.idPedido}" class="accordion-collapse collapse"
+                                             aria-labelledby="heading${pedido.idPedido}" data-bs-parent="#accordionPedidos">
+                                            <div class="accordion-body">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th></th>
+                                                            <th>Producto</th>
+                                                            <th>Precio unitario</th>
+                                                            <th>Cantidad</th>
+                                                            <th>Total</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <c:forEach var="linea" items="${pedido.lineasPedidos}">
+                                                            <tr>
+                                                                <td><img src="${contexto}/IMG/productos/${linea.producto.imagen}.jpg" class="img-fluid" style="max-width: 50px; height: auto;"/></td>
+                                                                <td>${linea.producto.nombre}</td>                                 
+                                                                <td>
+                                                                    <fmt:formatNumber value="${linea.producto.precio}" type="currency" currencySymbol="€"/>
+                                                                </td>
+                                                                <td>${linea.cantidad}</td>
+                                                                <td>
+                                                                    <fmt:formatNumber value="${linea.cantidad * linea.producto.precio}" type="currency" currencySymbol="€"/>
+                                                                </td>
+                                                            </tr>
+                                                        </c:forEach>
+                                                    </tbody>
+                                                </table>
+
+                                                <!-- Tabla de Totales -->
+                                                <table class="table w-50 ml-auto bg-light shadow-sm border rounded">
+                                                    <tbody>
+                                                        <!-- Base imponible -->
+                                                        <tr>
+                                                            <td class="text-right font-weight-bold border-0">Base imponible:</td>
+                                                            <td class="text-right border-0">
+                                                                <c:set var="baseImponible" value="0" />
+                                                                <c:forEach var="linea" items="${pedido.lineasPedidos}">
+                                                                    <c:set var="baseImponible" value="${baseImponible + (linea.producto.precio * linea.cantidad)}" />
+                                                                </c:forEach>
+                                                                <fmt:formatNumber value="${baseImponible}" type="currency" currencySymbol="€"/>
+                                                            </td>
+                                                        </tr>
+
+                                                        <!-- IVA -->
+                                                        <tr>
+                                                            <td class="text-right font-weight-bold">IVA (21%):</td>
+                                                            <td class="text-right">
+                                                                <fmt:formatNumber value="${baseImponible * 0.21}" type="currency" currencySymbol="€"/>
+                                                            </td>
+                                                        </tr>
+
+                                                        <!-- Total a pagar -->
+                                                        <tr class="bg-secondary text-white">
+                                                            <td class="text-right font-weight-bold h5 mb-0">Total a pagar:</td>
+                                                            <td class="text-right font-weight-bold">
+                                                                <fmt:formatNumber value="${baseImponible * 1.21}" type="currency" currencySymbol="€"/>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+
+                                            </div>
+                                        </div>
+                                    </div>
                                 </c:forEach>
-                            </tbody>
-                        </table>
+                            </div>
+                        </c:if>
+                        <c:if test="${empty sessionScope.pedidosFinalizados}">
+                            <p>No hay pedidos finalizados disponibles.</p>
+                        </c:if>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                     </div>
                 </div>
             </div>
         </div>
+
+
 
     </body>
 </html>

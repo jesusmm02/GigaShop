@@ -115,6 +115,52 @@ public class PedidoDAO implements IPedidoDAO {
         return idPedido; // Devuelve el ID del pedido o null si no se pudo insertar
     }
 
+    @Override
+    public List<Pedido> obtenerPedidosPorEstadoYUsuario(String estado, int idUsuario) throws Exception {
+        List<Pedido> pedidos = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        String query = "SELECT idPedido, fecha, importe FROM pedidos WHERE estado = ? AND idUsuario = ?";
+
+        try {
+            conn = ConnectionFactory.getConnection();
+            stmt = conn.prepareStatement(query);
+            stmt.setString(1, estado);
+            stmt.setInt(2, idUsuario);
+
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Pedido pedido = new Pedido();
+                pedido.setIdPedido(rs.getShort("idPedido"));
+                pedido.setFecha(rs.getDate("fecha"));
+                pedido.setImporte(rs.getDouble("importe"));
+                pedido.setEstado(Pedido.Estado.valueOf(estado.toLowerCase())); // Asignar el estado al pedido
+                pedidos.add(pedido);
+            }
+        } catch (SQLException e) {
+            throw new Exception("Error al obtener los pedidos por estado y usuario", e);
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return pedidos;
+    }
+
     /**
      *
      * @param idPedido
@@ -187,7 +233,7 @@ public class PedidoDAO implements IPedidoDAO {
     public void actualizarEstadoPedido(Pedido pedido) throws SQLException {
         String query = "UPDATE pedidos SET estado = ? WHERE idPedido = ?";
         try (Connection con = dataSource.getConnection(); PreparedStatement ps = con.prepareStatement(query)) {
-            ps.setString(1, String.valueOf(pedido.getEstado()));
+            ps.setString(1, pedido.getEstado().name());
             ps.setInt(2, pedido.getIdPedido());
             ps.executeUpdate();
         }

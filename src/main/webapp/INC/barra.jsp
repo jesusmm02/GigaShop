@@ -21,15 +21,10 @@
                 </form>
 
                 <!-- Botones de usuario -->
-                <div class="ml-auto d-flex align-items-center">
+                <div class="ml-auto d-flex align-items-center gap-3">
                     <c:choose>
                         <c:when test="${not empty sessionScope.usuario}">
-                            <!-- Botón para mostrar el modal -->
-                            <c:if test="${not empty lineasFinalizadas}">
-                                <button type="button" class="btn btn-info mt-3" data-bs-toggle="modal" data-bs-target="#modalPedidosFinalizados">
-                                    Ver pedidos finalizados
-                                </button>
-                            </c:if>
+                            <!-- Botón para cerrar sesión -->
                             <form action="FrontController" method="POST" class="mr-2">
                                 <button type="submit" class="btn btn-outline-danger" name="boton" value="logout">Cerrar sesión</button>
                             </form>
@@ -47,6 +42,13 @@
                                     </button>
                                 </form>
                             </div>
+
+                            <!-- Botón para mostrar el modal de pedidos finalizados -->
+                            <c:if test="${not empty sessionScope.pedidosFinalizados}">
+                                <button type="button" class="btn btn-info mt-3" data-bs-toggle="modal" data-bs-target="#modalPedidosFinalizados">
+                                    Ver pedidos finalizados
+                                </button>
+                            </c:if>
                         </c:when>
 
 
@@ -61,13 +63,16 @@
                     <!-- Botón del carrito -->
                     <form action="FrontController" method="POST" class="ml-3">
                         <button type="submit" class="btn btn-outline-success" name="boton" value="carrito"
-                                <c:if test="${empty sessionScope.pedido.lineasPedidos and empty cookie.carrito}">disabled</c:if>>
+                                <c:if test="${empty sessionScope.pedido.lineasPedidos or empty cookie.carrito}">disabled</c:if>>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
                             <path d="M0 1.5A.5.5 0 0 1 .5 1h1a.5.5 0 0 1 .485.379L2.89 5H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 14H4a.5.5 0 0 1-.491-.408L1.01 1.607 1.607 2H13a.5.5 0 0 1 0 1H2.89l-.48 2.405L1.607 2.121.5 1h-1zm4 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
                             </svg>
                         </button>
                     </form>
+
+
                 </div>
+
             </div>
         </nav>
     </body>

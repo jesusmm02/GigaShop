@@ -1,6 +1,8 @@
 package es.gigashop.controllers;
 
+import es.gigashop.DAO.IPedidoDAO;
 import es.gigashop.DAO.IProductoDAO;
+import es.gigashop.DAO.PedidoDAO;
 import es.gigashop.DAO.ProductoDAO;
 import es.gigashop.DAOFactory.DAOFactory;
 import es.gigashop.beans.Categoria;
@@ -115,7 +117,7 @@ public class FrontController extends HttpServlet {
 
                         if (session != null) {
                             session.removeAttribute("usuario");
-                            session.removeAttribute("pedido");
+                            session.removeAttribute("pedido"); // Probar a eliminar
                         }
 
                         request.setAttribute("logout", "Se ha cerrado la sesión.");
@@ -142,16 +144,23 @@ public class FrontController extends HttpServlet {
                                     DAOFactory daoF = DAOFactory.getDAOFactory();
                                     daoF.getPedidoDAO().actualizarEstadoPedido(pedidoCompra);
                                     
-                                    // Obtener las líneas de pedidos finalizados para el modal
-                                    List<LineaPedido> lineasFinalizadas = daoF.getPedidoDAO()
-                                            .obtenerLineasPedidosFinalizados(usuario.getIdUsuario());
+                                    IPedidoDAO pedDAO = daoF.getPedidoDAO();
+                                    List<Pedido> pedidosFinalizados = pedDAO.obtenerPedidosPorEstadoYUsuario("f", usuario.getIdUsuario());
+                                    
+                                    for (Pedido pedido: pedidosFinalizados) {
+                                        // Obtener las líneas de cada pedido
+                                        List<LineaPedido> lineas = pedDAO.obtenerLineasPedido(pedido.getIdPedido());
+                                        pedido.setLineasPedidos(lineas); // Asocia las líneas al pedido
+                                    }
+                                    
+                                    // Guardar los pedidos y líneas finalizadas en la sesión
+                                    session.setAttribute("pedidosFinalizados", pedidosFinalizados);
                                     
                                     // Limpiar el carrito
                                     session.removeAttribute("pedido");
                                     session.removeAttribute("carrito");
                                     
                                     // Guardar líneas finalizadas para el modal
-                                    request.setAttribute("lineasFinalizadas", lineasFinalizadas);
                                     request.setAttribute("compraExitosa", "El pedido ha sido confirmado y finalizado");
                                     
                                 } catch (Exception e) {
@@ -187,7 +196,7 @@ public class FrontController extends HttpServlet {
 
                                     // Limpia el carrito y la sesión
                                     session.removeAttribute("pedido");
-                                    session.removeAttribute("carrito");
+                                    ///////////////////////////////////////// session.removeAttribute("carrito"); /////////////////////////////
 
                                     // Actualiza la cookie del carrito
                                     Map<Short, Integer> carritoVacio = new HashMap<>();

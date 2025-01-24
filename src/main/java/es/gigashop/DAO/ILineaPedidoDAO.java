@@ -1,6 +1,7 @@
 package es.gigashop.DAO;
 
 import es.gigashop.beans.LineaPedido;
+import java.util.List;
 
 public interface ILineaPedidoDAO {
 
@@ -11,6 +12,14 @@ public interface ILineaPedidoDAO {
      * @return
      */
     public LineaPedido obtenerLineaPedido(Short idPedido, Short idProducto);
+    
+    /**
+     * 
+     * @param idPedido
+     * @return
+     * @throws Exception 
+     */
+    public List<LineaPedido> obtenerLineasPedido(Short idPedido) throws Exception;
     
     /**
      * 
