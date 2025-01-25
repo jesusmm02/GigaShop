@@ -49,7 +49,7 @@
             <%@ include file="/INC/barra.jsp" %>
 
             <!-- Mensaje flotante de aviso -->
-            <c:if test="${not empty añadido || not empty compraExitosa || not empty compraError || not empty elimCarrito || not empty prodElim || not empty usuRegistrado || not empty login || not empty logout}">
+            <c:if test="${not empty añadido || not empty compraExitosa || not empty compraError || not empty elimCarrito || not empty prodElim || not empty usuRegistrado || not empty login || not empty editado || not empty logout}">
                 <div id="mensajeFlotante" class="mensaje-flotante">
                     <c:choose>
                         <c:when test="${not empty añadido}">
@@ -72,7 +72,10 @@
                         </c:when>
                         <c:when test="${not empty login}">
                             ${login}
-                        </c:when>   
+                        </c:when>
+                        <c:when test="${not empty editado}">
+                            ${editado}
+                        </c:when>
                         <c:when test="${not empty logout}">
                             ${logout}
                         </c:when>

@@ -33,7 +33,7 @@
                                 <form action="${contexto}/UsuarioController" method="POST" class="d-flex align-items-center">
                                     <input type="hidden" name="accion" value="editarPerfil">
                                     <button type="submit" class="d-flex align-items-center btn btn-link text-decoration-none p-0">
-                                        <img src="../IMG/productos/default.jpg" class="rounded-circle" style="width: 40px; height: 40px;">
+                                        <img src="<c:url value='/IMG/avatares/${sessionScope.usuario.avatar}'/>" class="rounded-circle" style="width: 40px; height: 40px;">
                                         <div class="d-flex flex-column ml-2">
                                             <span>${sessionScope.usuario.nombre}</span>
                                             <fmt:formatDate value="${sessionScope.usuario.ultimoAcceso}" pattern="dd-MM-yyyy HH:mm" var="fechaFormateada" />

@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="${bootstrap}" />
         <script src="${contexto}/JS/validadorCorreo.js" defer></script>
         <script src="${contexto}/JS/generadorDni.js" defer></script>
+        <script src="${contexto}/JS/validarAvatar.js" defer></script>
         <!-- Bootstrap CSS -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <!-- Bootstrap JS -->
@@ -82,7 +83,7 @@
                 <div class="col-md-8">
                     <h1 class="text-center mb-4">Registro de usuario</h1>
 
-                    <form action="RegistroController" method="POST">
+                    <form action="RegistroController" method="POST" enctype="multipart/form-data">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -124,7 +125,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="nif">NIF:</label>
-                                    <input type="text" id="dni" name="dni" class="form-control">
+                                    <input type="text" id="nif" name="nif" class="form-control">
                                     <p id="mensaje"></p>
                                 </div>
                             </div>
@@ -168,14 +169,15 @@
                                 </div>
                             </div>
 
-                            <!--
+                            
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="avatar">Avatar</label>
-                                    <input type="file" id="avatar" name="avatar">
+                                    <input type="file" id="avatar" name="avatar" accept="image/*">
+                                    <p id="avatarError" style="color: red"></p>
                                 </div>
                             </div>
-                            -->
+                            
                         </div>
 
 

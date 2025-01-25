@@ -1,6 +1,8 @@
 const dniEndPoint = "http://localhost:8080/GigaShop/RegistroController"; // Cambiado el nombre de 'URL' a 'dniEndpoint'
 
-const inputDNI = document.getElementById('dni');
+const inputDNI = document.getElementById('nif');
+console.log(inputDNI);
+
 const parrafoMensaje = document.getElementById('mensaje');
 
 inputDNI.addEventListener('blur', async () => {

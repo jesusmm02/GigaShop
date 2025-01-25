@@ -9,24 +9,35 @@ import es.gigashop.beans.Pedido;
 import es.gigashop.beans.Producto;
 import es.gigashop.beans.Usuario;
 import es.gigashop.models.Utils;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.servlet.http.Part;
 
 /**
  *
  * @author Jesús
  */
 @WebServlet(name = "UsuarioController", urlPatterns = {"/UsuarioController"})
+@MultipartConfig(
+        fileSizeThreshold = 1024 * 1024 * 2, // 2MB
+        maxFileSize = 1024 * 1024 * 10, // 10MB
+        maxRequestSize = 1024 * 1024 * 50 // 50MB
+)
 public class UsuarioController extends HttpServlet {
+
+    private static final String UPLOAD_DIR = "IMG/avatares";
 
     /**
      * Handles the HTTP <code>GET</code> method.
@@ -73,6 +84,7 @@ public class UsuarioController extends HttpServlet {
                         // Convertir la contraseña ingresada a MD5 y comparar con la base de datos
                         String hashedPassword = Utils.hashMD5(password);
                         if (hashedPassword.equals(usuario.getPassword())) {
+
                             // Actualizar la fecha de último acceso
                             Timestamp ahora = new Timestamp(new Date().getTime());
                             usuario.setUltimoAcceso(ahora);
@@ -160,6 +172,7 @@ public class UsuarioController extends HttpServlet {
                     }
                     break;
                 }
+                // Sección dentro del caso "actualizarPerfil"
                 case "actualizarPerfil": {
                     HttpSession session = request.getSession(false);
 
@@ -178,12 +191,7 @@ public class UsuarioController extends HttpServlet {
                         String provincia = request.getParameter("provincia");
                         String localidad = request.getParameter("localidad");
 
-                        // Contraseña
-                        String passwordActual = request.getParameter("passwordActual");
-                        String passwordNueva1 = request.getParameter("passwordNueva1");
-                        String passwordNueva2 = request.getParameter("passwordNueva2");
-
-                        // Validar y actualizar datos del usuario
+                        // Actualizar campos del usuario
                         usuario.setNombre(nombre);
                         usuario.setApellidos(apellidos);
                         usuario.setTelefono(telefono);
@@ -192,16 +200,17 @@ public class UsuarioController extends HttpServlet {
                         usuario.setProvincia(provincia);
                         usuario.setLocalidad(localidad);
 
+                        // Contraseña
+                        String passwordActual = request.getParameter("passwordActual");
+                        String passwordNueva1 = request.getParameter("passwordNueva1");
+                        String passwordNueva2 = request.getParameter("passwordNueva2");
+
                         // Validar cambio de contraseña
                         if (passwordActual != null && !passwordActual.isEmpty()) {
                             String hashedPasswordActual = Utils.hashMD5(passwordActual);
 
-                            // Compara con la contraseña del usuario en sesión
                             if (hashedPasswordActual.equals(usuario.getPassword())) {
-
-                                // Si la contraseñaNueva 1 coincide con la contraseñaNueva2
                                 if (passwordNueva1 != null && passwordNueva1.equals(passwordNueva2)) {
-                                    // Hashear la nueva contraseña antes de guardarla
                                     String hashedNuevaPassword = Utils.hashMD5(passwordNueva1);
                                     usuario.setPassword(hashedNuevaPassword);
                                 } else {
@@ -216,9 +225,30 @@ public class UsuarioController extends HttpServlet {
                             }
                         }
 
-                        // Actualizar el usuario en la base de datos
+                        // Manejar subida del avatar
+                        Part filePart = request.getPart("avatar");
+                        if (filePart != null && filePart.getSize() > 0) {
+                            String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
+                            String fileExtension = fileName.substring(fileName.lastIndexOf("."));
+                            String uniqueFileName = String.valueOf(System.currentTimeMillis()) + fileExtension;
+
+                            String uploadPath = getServletContext().getRealPath("") + File.separator + UPLOAD_DIR;
+                            File uploadDir = new File(uploadPath);
+                            if (!uploadDir.exists()) {
+                                uploadDir.mkdir();
+                            }
+
+                            String filePath = uploadPath + File.separator + uniqueFileName;
+
+                            filePart.write(filePath);
+
+                            // Guardar el nombre del archivo en el usuario
+                            usuario.setAvatar(uniqueFileName);
+                        }
+
                         if (usuDAO.actualizarUsuario(usuario)) {
-                            session.setAttribute("usuario", usuario); // Actualizar usuario en sesión
+                            request.setAttribute("editado", "Usuario actualizado correctamente.");
+                            session.setAttribute("usuario", usuario);
                             request.getRequestDispatcher("/JSP/tienda.jsp").forward(request, response);
                         } else {
                             request.setAttribute("error", "Error al actualizar los datos. Inténtalo más tarde.");
@@ -229,6 +259,7 @@ public class UsuarioController extends HttpServlet {
                     }
                     break;
                 }
+
                 default:
                     // Si la acción no coincide con las esperadas, redirigir al inicio
                     request.getRequestDispatcher("/JSP/login.jsp").forward(request, response);

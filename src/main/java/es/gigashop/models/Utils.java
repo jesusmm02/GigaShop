@@ -11,6 +11,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -21,6 +22,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.servlet.http.Part;
 
 public class Utils {
 
@@ -146,17 +148,47 @@ public class Utils {
      */
     public static String comprobarCampos(Enumeration<String> parametros, HttpServletRequest request) {
         String error = "n";
-        while (parametros.hasMoreElements() && error.equals("n")) {
-            String nombre = parametros.nextElement();
-            if (request.getParameter(nombre).length() == 0) {
-                error = "v";
+
+        // Campos críticos a validar (sin incluir el archivo aquí)
+        String[] camposCriticos = {
+            "nombre", "apellidos", "email", "password", "confirmPassword",
+            "nif", "telefono", "direccion", "codigoPostal", "provincia", "localidad"
+        };
+
+        // Verificar campos críticos
+        for (String campo : camposCriticos) {
+            String valor = request.getParameter(campo);
+            if (valor == null || valor.trim().isEmpty()) {
+                error = "v"; // Campo vacío
+                break;
             }
         }
+
+        // Verificar el campo de archivo
         if (error.equals("n")) {
-            if (!request.getParameter("password").equals(request.getParameter("confirmPassword"))) {
-                error = "c";
+            try {
+                Part avatarPart = request.getPart("avatar");
+                if (avatarPart == null || avatarPart.getSize() <= 0) {
+                    request.setAttribute("avatar", "default.jpg");
+                } else {
+                    System.out.println("Archivo recibido: " + avatarPart.getSubmittedFileName());
+                }
+            } catch (Exception e) {
+                e.printStackTrace(); // Muestra detalles del error en la consola
+                error = "a"; // Error al procesar el archivo
             }
         }
+
+        // Verificar contraseñas si no hay otros errores
+        if (error.equals("n")) {
+            String password = request.getParameter("password");
+            String confirmPassword = request.getParameter("confirmPassword");
+
+            if (!password.equals(confirmPassword)) {
+                error = "c"; // Contraseñas no coinciden
+            }
+        }
+
         return error;
     }
 
@@ -191,9 +223,9 @@ public class Utils {
     }
 
     /**
-     * Actualiza las líneas de pedido en base al contenido del carrito: 
-     * - Si el producto ya está en el pedido, actualiza su cantidad. 
-     * - Si no está en el pedido, crea una nueva línea de pedido y la agrega.
+     * Actualiza las líneas de pedido en base al contenido del carrito: - Si el
+     * producto ya está en el pedido, actualiza su cantidad. - Si no está en el
+     * pedido, crea una nueva línea de pedido y la agrega.
      *
      * @param pedido objeto pedido a sincronizar.
      * @param carrito un mapa que representa el carrito

@@ -18,8 +18,8 @@ public class UsuarioDAO implements IUsuarioDAO {
         Boolean emailRepetido = Boolean.FALSE;
         Connection connection = null;
         PreparedStatement preparada = null;
-        String sql = "INSERT INTO usuarios (email,password,nombre,apellidos,nif,telefono,direccion,codigoPostal,localidad,provincia,ultimoAcceso) "
-                + "VALUES (?,md5(?),?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO usuarios (email,password,nombre,apellidos,nif,telefono,direccion,codigoPostal,localidad,provincia,ultimoAcceso,avatar) "
+                + "VALUES (?,md5(?),?,?,?,?,?,?,?,?,?,?)";
         try {
             connection = ConnectionFactory.getConnection();
             connection.setAutoCommit(false);
@@ -35,6 +35,7 @@ public class UsuarioDAO implements IUsuarioDAO {
             preparada.setString(9, usuario.getLocalidad());
             preparada.setString(10, usuario.getProvincia());
             preparada.setTimestamp(11, usuario.getUltimoAcceso());
+            preparada.setString(12, usuario.getAvatar());
 
             preparada.executeUpdate();
             connection.commit();
@@ -80,18 +81,21 @@ public class UsuarioDAO implements IUsuarioDAO {
     @Override
     public boolean actualizarUsuario(Usuario usuario) {
         try (Connection con = ConnectionFactory.getConnection(); PreparedStatement ps = con.prepareStatement(
-                "UPDATE usuarios SET nombre = ?, apellidos = ?, telefono = ?, direccion = ?, "
-                + "codigoPostal = ?, provincia = ?, localidad = ?, password = ? WHERE email = ?")) {
+                "UPDATE usuarios SET nombre = ?, apellidos = ?, nif = ?, telefono = ?, direccion = ?, "
+                + "codigoPostal = ?, provincia = ?, localidad = ?, password = ?, avatar = ? WHERE email = ?")) {
 
             ps.setString(1, usuario.getNombre());
             ps.setString(2, usuario.getApellidos());
-            ps.setString(3, usuario.getTelefono());
-            ps.setString(4, usuario.getDireccion());
-            ps.setString(5, usuario.getCodigoPostal());
-            ps.setString(6, usuario.getProvincia());
-            ps.setString(7, usuario.getLocalidad());
-            ps.setString(8, usuario.getPassword());
-            ps.setString(9, usuario.getEmail());
+            ps.setString(3, usuario.getNif());
+            ps.setString(4, usuario.getTelefono());
+            ps.setString(5, usuario.getDireccion());
+            ps.setString(6, usuario.getCodigoPostal());
+            ps.setString(7, usuario.getProvincia());
+            ps.setString(8, usuario.getLocalidad());
+            ps.setString(9, usuario.getPassword());
+            ps.setString(10, usuario.getAvatar());
+            ps.setString(11, usuario.getEmail());
+            
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -140,6 +144,7 @@ public class UsuarioDAO implements IUsuarioDAO {
                     usuario.setIdUsuario(rs.getShort("idUsuario"));
                     usuario.setNombre(rs.getString("nombre"));
                     usuario.setApellidos(rs.getString("apellidos"));
+                    usuario.setNif(rs.getString("nif"));
                     usuario.setEmail(rs.getString("email"));
                     usuario.setTelefono(rs.getString("telefono"));
                     usuario.setDireccion(rs.getString("direccion"));
@@ -148,6 +153,7 @@ public class UsuarioDAO implements IUsuarioDAO {
                     usuario.setLocalidad(rs.getString("localidad"));
                     usuario.setPassword(rs.getString("password"));
                     usuario.setUltimoAcceso(rs.getTimestamp("ultimoAcceso"));
+                    usuario.setAvatar(rs.getString("avatar"));
                 }
             }
         } catch (SQLException e) {

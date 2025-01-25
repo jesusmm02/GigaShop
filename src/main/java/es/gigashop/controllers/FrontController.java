@@ -114,6 +114,18 @@ public class FrontController extends HttpServlet {
                     case "logout":
 
                         session = request.getSession(false); // Obtener la sesión actual sin crear una nueva
+                        
+                        Cookie[] cookies = request.getCookies();
+                        if (cookies != null) {
+                            for (Cookie cookie : cookies) {
+                                if ("carrito".equals(cookie.getName())) {
+                                    cookie.setValue(""); // Vaciar el contenido de la cookie
+                                    cookie.setMaxAge(0); // Eliminar la cookie
+                                    cookie.setPath("/GigaShop"); // Asegurarte de usar el mismo path que se usó al crearla
+                                    response.addCookie(cookie); // Actualizar la respuesta con la cookie eliminada
+                                }
+                            }
+                        }
 
                         if (session != null) {
                             session.removeAttribute("usuario");
@@ -220,6 +232,10 @@ public class FrontController extends HttpServlet {
 
                                 // Limpia el carrito en la sesión (por si existe)
                                 session.removeAttribute("carrito");
+                                
+                                // Borra la cookie
+                                Pedido pedidoCompra = (Pedido) session.getAttribute("pedido");
+                                pedidoCompra.getLineasPedidos().clear();
 
                                 // Mensaje de confirmación para la vista
                                 request.setAttribute("elimCarrito", "El carrito anónimo ha sido eliminado correctamente.");
