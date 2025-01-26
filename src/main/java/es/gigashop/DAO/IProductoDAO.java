@@ -2,6 +2,7 @@ package es.gigashop.DAO;
 
 import es.gigashop.beans.Filtro;
 import es.gigashop.beans.Producto;
+import java.sql.SQLException;
 import java.util.List;
 
 public interface IProductoDAO {

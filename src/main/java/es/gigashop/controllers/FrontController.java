@@ -2,7 +2,6 @@ package es.gigashop.controllers;
 
 import es.gigashop.DAO.IPedidoDAO;
 import es.gigashop.DAO.IProductoDAO;
-import es.gigashop.DAO.PedidoDAO;
 import es.gigashop.DAO.ProductoDAO;
 import es.gigashop.DAOFactory.DAOFactory;
 import es.gigashop.beans.Categoria;

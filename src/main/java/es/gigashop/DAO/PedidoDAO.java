@@ -1,7 +1,6 @@
 package es.gigashop.DAO;
 
 import static es.gigashop.DAO.ConnectionFactory.dataSource;
-import es.gigashop.DAOFactory.DAOFactory;
 import es.gigashop.beans.LineaPedido;
 import es.gigashop.beans.Pedido;
 import es.gigashop.beans.Producto;
@@ -10,7 +9,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -228,6 +226,19 @@ public class PedidoDAO implements IPedidoDAO {
         }
         return lineas;
     }
+
+    @Override
+    public void actualizarPedido(Pedido pedido) throws SQLException {
+    String sql = "UPDATE pedidos SET importe = ?, iva = ? WHERE idPedido = ?";
+    try (Connection connection = ConnectionFactory.getConnection();
+         PreparedStatement ps = connection.prepareStatement(sql)) {
+        ps.setDouble(1, pedido.getImporte());
+        ps.setDouble(2, pedido.getIva());
+        ps.setShort(3, pedido.getIdPedido());
+        ps.executeUpdate();
+    }
+}
+
 
     @Override
     public void actualizarEstadoPedido(Pedido pedido) throws SQLException {

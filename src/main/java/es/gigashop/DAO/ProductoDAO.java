@@ -259,7 +259,7 @@ public class ProductoDAO implements IProductoDAO {
 
         return productos;
     }
-
+    
     @Override
     public void closeConnection() {
         ConnectionFactory.closeConnection();

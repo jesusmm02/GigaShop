@@ -146,7 +146,7 @@ public class LineaPedidoDAO implements ILineaPedidoDAO {
         PreparedStatement preparada = null;
         ResultSet rs = null;
         String sqlCheck = "SELECT idLinea FROM lineaspedidos WHERE idPedido = ? AND idProducto = ?";
-        String sqlUpdate = "UPDATE lineaspedidos SET cantidad = cantidad + 1 WHERE idPedido = ? AND idProducto = ?";
+        String sqlUpdate = "UPDATE lineaspedidos SET cantidad = ? WHERE idPedido = ? AND idProducto = ?";
         String sqlInsert = "INSERT INTO lineaspedidos (idPedido, idProducto, cantidad) VALUES (?, ?, ?)";
         try {
             connection = ConnectionFactory.getConnection();
@@ -154,6 +154,7 @@ public class LineaPedidoDAO implements ILineaPedidoDAO {
             // Logs de depuración
             System.out.println("ID Pedido: " + lineaPedido.getPedido().getIdPedido());
             System.out.println("ID Producto: " + lineaPedido.getProducto().getIdProducto());
+            System.out.println("Cantidad nueva: " + lineaPedido.getCantidad());
 
             preparada = connection.prepareStatement(sqlCheck);
             preparada.setShort(1, lineaPedido.getPedido().getIdPedido());
@@ -163,14 +164,15 @@ public class LineaPedidoDAO implements ILineaPedidoDAO {
             if (rs.next()) {
                 System.out.println("Producto encontrado, actualizando cantidad");
                 preparada = connection.prepareStatement(sqlUpdate);
-                preparada.setShort(1, lineaPedido.getPedido().getIdPedido());
-                preparada.setShort(2, lineaPedido.getProducto().getIdProducto());
+                preparada.setByte(1, lineaPedido.getCantidad()); // Actualiza con la cantidad proporcionada
+                preparada.setShort(2, lineaPedido.getPedido().getIdPedido());
+                preparada.setShort(3, lineaPedido.getProducto().getIdProducto());
             } else {
                 System.out.println("Producto no encontrado, insertando nuevo");
                 preparada = connection.prepareStatement(sqlInsert);
                 preparada.setShort(1, lineaPedido.getPedido().getIdPedido());
                 preparada.setShort(2, lineaPedido.getProducto().getIdProducto());
-                preparada.setByte(3, (byte) 1);
+                preparada.setByte(3, lineaPedido.getCantidad()); // Inserta con la cantidad inicial
             }
             preparada.executeUpdate();
         } catch (Exception e) {

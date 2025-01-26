@@ -84,13 +84,6 @@ public class RegistroController extends HttpServlet {
                     // Manejar subida del avatar
                     Part filePart = request.getPart("avatar");
 
-                    if (filePart != null) {
-                        System.out.println("Archivo recibido: " + filePart.getSubmittedFileName());
-                        System.out.println("Tamaño del archivo: " + filePart.getSize());
-                    } else {
-                        System.out.println("No se recibió ningún archivo.");
-                    }
-
                     if (filePart != null && filePart.getSize() > 0) {
 
                         // Obtener el nombre del archivo original
@@ -101,8 +94,6 @@ public class RegistroController extends HttpServlet {
 
                         // Generar nombre único para el archivo
                         String uniqueFileName = String.valueOf(System.currentTimeMillis()) + fileExtension;
-
-                        System.out.println("Nombre único del archivo: " + uniqueFileName);
 
                         // Establecer el directorio de subida
                         String uploadPath = getServletContext().getRealPath("") + File.separator + UPLOAD_DIR;

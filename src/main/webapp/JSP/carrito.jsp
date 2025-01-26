@@ -238,11 +238,7 @@
                                                         <tr>
                                                             <td class="text-right font-weight-bold border-0">Base imponible:</td>
                                                             <td class="text-right border-0">
-                                                                <c:set var="baseImponible" value="0" />
-                                                                <c:forEach var="linea" items="${pedido.lineasPedidos}">
-                                                                    <c:set var="baseImponible" value="${baseImponible + (linea.producto.precio * linea.cantidad)}" />
-                                                                </c:forEach>
-                                                                <fmt:formatNumber value="${baseImponible}" type="currency" currencySymbol="€"/>
+                                                                <fmt:formatNumber value="${pedido.importe}" type="currency" currencySymbol="€"/>
                                                             </td>
                                                         </tr>
 
@@ -250,7 +246,7 @@
                                                         <tr>
                                                             <td class="text-right font-weight-bold">IVA (21%):</td>
                                                             <td class="text-right">
-                                                                <fmt:formatNumber value="${baseImponible * 0.21}" type="currency" currencySymbol="€"/>
+                                                                <fmt:formatNumber value="${pedido.importe * 0.21}" type="currency" currencySymbol="€"/>
                                                             </td>
                                                         </tr>
 
@@ -258,7 +254,7 @@
                                                         <tr class="bg-secondary text-white">
                                                             <td class="text-right font-weight-bold h5 mb-0">Total a pagar:</td>
                                                             <td class="text-right font-weight-bold">
-                                                                <fmt:formatNumber value="${baseImponible * 1.21}" type="currency" currencySymbol="€"/>
+                                                                <fmt:formatNumber value="${pedido.importe * 1.21}" type="currency" currencySymbol="€"/>
                                                             </td>
                                                         </tr>
                                                     </tbody>

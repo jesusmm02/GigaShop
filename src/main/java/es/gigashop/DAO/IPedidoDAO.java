@@ -38,6 +38,9 @@ public interface IPedidoDAO {
      */
     public List<Pedido> obtenerPedidosPorEstadoYUsuario(String estado, int idUsuario) throws Exception;
     
+    
+    public void actualizarPedido(Pedido pedido) throws SQLException;
+    
     /**
      * 
      * @param pedido

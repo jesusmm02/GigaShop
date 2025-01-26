@@ -1,10 +1,16 @@
 package es.gigashop.controllers;
 
-import es.gigashop.DAO.IPedidoDAO;
 import es.gigashop.DAOFactory.DAOFactory;
+
+import es.gigashop.DAO.IPedidoDAO;
+import es.gigashop.DAO.ILineaPedidoDAO;
+import es.gigashop.DAO.IProductoDAO;
+
+import es.gigashop.beans.Producto;
 import es.gigashop.beans.LineaPedido;
 import es.gigashop.beans.Pedido;
 import es.gigashop.beans.Usuario;
+
 import es.gigashop.models.Utils;
 
 import javax.servlet.ServletException;
@@ -16,10 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import java.io.IOException;
-
-import es.gigashop.DAO.ILineaPedidoDAO;
-import es.gigashop.DAO.IProductoDAO;
-import es.gigashop.beans.Producto;
+import java.sql.SQLException;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -27,6 +30,8 @@ import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @WebServlet(name = "Cesta", urlPatterns = {"/Cesta"})
 public class Cesta extends HttpServlet {
@@ -50,9 +55,10 @@ public class Cesta extends HttpServlet {
         // Recupera el carrito de la sesión
         Map<Short, Integer> carrito;
 
-        carrito = Utils.obtenerCarritoDesdeCookie(request);
+        // Recupera el usuario de la sesión
+        Usuario usuario = (Usuario) session.getAttribute("usuario");
 
-        System.out.println(carrito);
+        carrito = Utils.obtenerCarritoDesdeCookie(request);
 
         if (carrito == null) {
             carrito = new HashMap<>();
@@ -64,36 +70,61 @@ public class Cesta extends HttpServlet {
                 if (idProductoStr != null && !idProductoStr.isEmpty()) {
                     short idProducto = Short.parseShort(idProductoStr);
 
-                    // Incrementa la cantidad del producto en el carrito
-                    carrito.put(idProducto, carrito.getOrDefault(idProducto, 0) + 1);
+                    if (usuario != null) {
+                        // Acceso a DAOs necesarios
+                        DAOFactory daoF = DAOFactory.getDAOFactory();
+                        IPedidoDAO pedidoDAO = daoF.getPedidoDAO();
+                        ILineaPedidoDAO lineaPedidoDAO = daoF.getLineaPedidoDAO();
+                        IProductoDAO productoDAO = daoF.getProductoDAO();
 
-                    // Actualiza el carrito en sesión y la cookie
-                    session.setAttribute("carrito", carrito);
-                    Utils.actualizarCookie(response, carrito);
-
-                    // Sincroniza el pedido
-                    Pedido pedido = Utils.recuperarPedidoDeSesion(session);
-                    Utils.actualizarPedidoDesdeCarrito(pedido, carrito);
-                    pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
-                    pedido.setIva(pedido.getImporte() * 0.21);
-                    session.setAttribute("pedido", pedido);
-
-                    url = "/JSP/carrito.jsp";
-                }
-            } else if ("restarCant".equals(accion)) {
-                String idProductoStr = request.getParameter("idProducto");
-                if (idProductoStr != null && !idProductoStr.isEmpty()) {
-                    short idProducto = Short.parseShort(idProductoStr);
-
-                    // Decrementa la cantidad del producto en el carrito
-                    if (carrito.containsKey(idProducto)) {
-                        int cantidadActual = carrito.get(idProducto);
-                        if (cantidadActual > 1) {
-                            carrito.put(idProducto, cantidadActual - 1);
-                        } else {
-                            // Opcional: elimina el producto si llega a 0
-                            carrito.remove(idProducto);
+                        // Recuperar o crear el pedido del usuario
+                        Pedido pedido = pedidoDAO.obtenerPedidoPorUsuario(usuario.getIdUsuario());
+                        if (pedido == null) {
+                            // Crear un nuevo pedido si no existe
+                            pedido = new Pedido();
+                            List<LineaPedido> lineaspedidos = new ArrayList();
+                            pedido.setUsuario(usuario);
+                            pedido.setFecha(new Date());
+                            pedido.setEstado(Pedido.Estado.c);
+                            pedido.setImporte(0.0);
+                            pedido.setIva(0.0);
+                            pedido.setLineasPedidos(lineaspedidos);
+                            pedido.setIdPedido(pedidoDAO.insertarPedido(pedido));
                         }
+
+                        LineaPedido lineaPedido = lineaPedidoDAO.obtenerLineaPedido(pedido.getIdPedido(), idProducto);
+                        if (lineaPedido == null) {
+                            // Crear una nueva línea de pedido sí no existe
+                            lineaPedido = new LineaPedido();
+                            lineaPedido.setPedido(pedido);
+                            Producto producto = productoDAO.getProductoPorID(idProducto);
+                            lineaPedido.setProducto(producto);
+                            lineaPedido.setCantidad((byte) 1);
+                            pedido.getLineasPedidos().add(lineaPedido);
+                            lineaPedidoDAO.insertarOActualizarLineaPedido(lineaPedido);
+                        } else {
+                            // Incrementar la cantidad existente
+                            byte cantidadActual = lineaPedido.getCantidad();
+                            lineaPedido.setCantidad((byte) (cantidadActual + 1));
+                            lineaPedidoDAO.insertarOActualizarLineaPedido(lineaPedido);
+                        }
+
+                        // Actualizar los detalles del pedido
+                        List<LineaPedido> lineasPedidos = pedidoDAO.obtenerLineasPedido(pedido.getIdPedido());
+                        for (LineaPedido linea : lineasPedidos) {
+                            Producto producto = productoDAO.getProductoPorID(linea.getProducto().getIdProducto());
+                            linea.setProducto(producto);
+                        }
+                        pedido.setLineasPedidos(lineasPedidos);
+                        pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
+                        pedido.setIva(pedido.getImporte() * 0.21);
+                        pedidoDAO.actualizarPedido(pedido);
+                        session.setAttribute("pedido", pedido);
+
+                    } else { // Usuario anónimo
+
+                        // Incrementa la cantidad del producto en el carrito
+                        carrito.put(idProducto, carrito.getOrDefault(idProducto, 0) + 1);
 
                         // Actualiza el carrito en sesión y la cookie
                         session.setAttribute("carrito", carrito);
@@ -106,16 +137,81 @@ public class Cesta extends HttpServlet {
                         pedido.setIva(pedido.getImporte() * 0.21);
                         session.setAttribute("pedido", pedido);
 
-                        url = "/JSP/carrito.jsp";
                     }
+                    url = "/JSP/carrito.jsp";
                 }
-            } else if ("eliminarProd".equals(accion)) {
-                // Acción: Eliminar producto del carrito
+            } else if ("restarCant".equals(accion)) {
                 String idProductoStr = request.getParameter("idProducto");
                 if (idProductoStr != null && !idProductoStr.isEmpty()) {
                     short idProducto = Short.parseShort(idProductoStr);
 
-                    Usuario usuario = (Usuario) session.getAttribute("usuario");
+                    if (usuario != null) {
+                        // Acceso a DAOs necesarios
+                        DAOFactory daoF = DAOFactory.getDAOFactory();
+                        IPedidoDAO pedidoDAO = daoF.getPedidoDAO();
+                        ILineaPedidoDAO lineaPedidoDAO = daoF.getLineaPedidoDAO();
+                        IProductoDAO productoDAO = daoF.getProductoDAO();
+
+                        Pedido pedido = (Pedido) session.getAttribute("pedido");
+
+                        if (pedido != null) {
+                            LineaPedido lineaPedido = lineaPedidoDAO.obtenerLineaPedido(pedido.getIdPedido(), idProducto);
+
+                            if (lineaPedido != null) {
+                                byte cantidadActual = lineaPedido.getCantidad();
+
+                                if (cantidadActual > 1) {
+                                    lineaPedido.setCantidad((byte) (cantidadActual - 1));
+                                    lineaPedidoDAO.insertarOActualizarLineaPedido(lineaPedido);
+                                }
+
+                                // Recupera líneas de pedido actualizadas
+                                List<LineaPedido> lineasPedidos = pedidoDAO.obtenerLineasPedido(pedido.getIdPedido());
+                                for (LineaPedido linea : lineasPedidos) {
+                                    Producto producto = productoDAO.getProductoPorID(linea.getProducto().getIdProducto());
+                                    linea.setProducto(producto);
+                                }
+
+                                pedido.setLineasPedidos(lineasPedidos);
+                                pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
+                                pedido.setIva(pedido.getImporte() * 0.21);
+                                pedidoDAO.actualizarPedido(pedido);
+
+                                // Actualiza el pedido en sesión
+                                session.setAttribute("pedido", pedido);
+                            }
+                        }
+
+                    } else { // Usuario anónimo
+
+                        // Decrementa la cantidad del producto en el carrito
+                        if (carrito.containsKey(idProducto)) {
+                            int cantidadActual = carrito.get(idProducto);
+                            if (cantidadActual > 1) {
+                                carrito.put(idProducto, cantidadActual - 1);
+                            } else {
+                                // Opcional: elimina el producto si llega a 0
+                                carrito.remove(idProducto);
+                            }
+
+                            // Actualiza el carrito en sesión y la cookie
+                            session.setAttribute("carrito", carrito);
+                            Utils.actualizarCookie(response, carrito);
+
+                            // Sincroniza el pedido
+                            Pedido pedido = Utils.recuperarPedidoDeSesion(session);
+                            Utils.actualizarPedidoDesdeCarrito(pedido, carrito);
+                            pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
+                            pedido.setIva(pedido.getImporte() * 0.21);
+                            session.setAttribute("pedido", pedido);
+                        }   
+                    }
+                    url = "/JSP/carrito.jsp";
+                }
+            } else if ("eliminarProd".equals(accion)) {
+                String idProductoStr = request.getParameter("idProducto");
+                if (idProductoStr != null && !idProductoStr.isEmpty()) {
+                    short idProducto = Short.parseShort(idProductoStr);
 
                     if (usuario != null) {
                         DAOFactory daoF = DAOFactory.getDAOFactory();
@@ -139,6 +235,7 @@ public class Cesta extends HttpServlet {
                             pedido.setLineasPedidos(lineasPedidos);
                             pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
                             pedido.setIva(pedido.getImporte() * 0.21);
+                            pdiDAO.actualizarPedido(pedido);
                             session.setAttribute("pedido", pedido);
 
                             if (lineasPedidos.isEmpty()) {
@@ -194,17 +291,11 @@ public class Cesta extends HttpServlet {
 
                     Short idProducto = Short.parseShort(idProductoStr);
 
-                    System.out.println("Intento de añadir producto: " + idProducto);
-
-                    Usuario usuario = (Usuario) session.getAttribute("usuario");
-
                     if (usuario != null) {
-                        System.out.println("Añadiendo producto para usuario: " + usuario.getNombre());
                         DAOFactory daoF = DAOFactory.getDAOFactory();
                         IPedidoDAO pdiDAO = daoF.getPedidoDAO();
                         IProductoDAO proDAO = daoF.getProductoDAO();
 
-                        System.out.println("No hay pedido en sesión, buscando pedido existente");
                         Pedido pedido = pdiDAO.obtenerPedidoPorUsuario(usuario.getIdUsuario());
 
                         List<LineaPedido> lineasPedidos = (pedido != null)
@@ -212,34 +303,30 @@ public class Cesta extends HttpServlet {
                                 : null;
 
                         if (lineasPedidos == null) {
-                            System.out.println("Creando nuevo pedido para usuario");
                             pedido = new Pedido();
                             List<LineaPedido> lineaspedidos = new ArrayList();
                             pedido.setFecha(new Date());
                             pedido.setEstado(Pedido.Estado.c);
                             pedido.setUsuario(usuario);
-                            pedido.setImporte(0.0);
-                            pedido.setIva(0.0);
-                            pedido.setLineasPedidos(lineaspedidos);
+                            double importeTotal = Utils.calcularImporteTotal(lineaspedidos);
+                            double ivaTotal = importeTotal * 0.21;
 
-                            System.out.println("Intentando insertar nuevo pedido para usuario: " + usuario.getNombre());
+                            pedido.setImporte(importeTotal);
+                            pedido.setIva(ivaTotal);
+                            pedido.setLineasPedidos(lineaspedidos);
 
                             // Inserta el nuevo pedido en la base de datos
                             Short idPedido = pdiDAO.insertarPedido(pedido);
 
                             if (idPedido == null) {
-                                System.out.println("Fallo al crear pedido para usuario: " + usuario.getNombre());
                                 throw new ServletException("No se pudo crear un nuevo pedido para el usuario.");
                             }
 
-                            System.out.println("Pedido creado con ID: " + idPedido);
                             pedido.setIdPedido(idPedido);
 
                             session.setAttribute("pedido", pedido);
 
                         } else {
-
-                            System.out.println("Pedido existente encontrado en ID: " + pedido.getIdPedido());
 
                             // Si ya existe un pedido, recupera sus líneas de pedido
                             List<LineaPedido> lineaspedidos = pdiDAO.obtenerLineasPedido(pedido.getIdPedido());
@@ -287,12 +374,19 @@ public class Cesta extends HttpServlet {
                         // Actualiza la sesión y el importe del pedido
                         pedido.setImporte(Utils.calcularImporteTotal(pedido.getLineasPedidos()));
                         pedido.setIva(pedido.getImporte() * 0.21);
+                        pdiDAO.actualizarPedido(pedido);
                         session.setAttribute("pedido", pedido);
 
                         // Mensaje de confirmación
                         request.setAttribute("añadido", "Se ha añadido un producto al carrito.");
 
                     } else { // Usuario anónimo
+                        
+                        // Recuperar el carrito de la sesión o inicializar uno nuevo
+                        carrito = (Map<Short, Integer>) session.getAttribute("carrito");
+                        if (carrito == null) {
+                        carrito = new HashMap<>();
+                        }
 
                         idProducto = Short.parseShort(idProductoStr);
 
@@ -319,6 +413,8 @@ public class Cesta extends HttpServlet {
             // Maneja errores de formato en los parámetros
             request.setAttribute("error", "Error al procesar los datos del producto: " + e.getMessage());
             url = "/JSP/tienda.jsp";  // Redirige a la tienda en caso de error
+        } catch (SQLException ex) {
+            Logger.getLogger(Cesta.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         // Redirige al URL correspondiente
